@@ -15,6 +15,7 @@ namespace NSwissEph
 		/// This function returns the absolute Julian day number (JD) for a given calendar date.
 		/// </summary>
 		/// <param name="isGregorian">if true, Gregorian calendar is assumed, else Julian calendar is assumed</param>
+		/// <see cref="swe_julday"/>
 		/// <remarks>
 		/// The Julian day number is a system of numbering all days continously
 		/// within the time range of known human history. It should be familiar
@@ -77,6 +78,7 @@ namespace NSwissEph
 		/// This function returns the UTC date for a current absolute Julian day number (JD).
 		/// </summary>
 		/// <param name="isGregorian">if true, Gregorian calendar is assumed, else Julian calendar is assumed</param>
+		/// <see cref="swe_revjul"/>
 		/// <remarks>
 		/// Be aware the we use astronomical year numbering for the years
 		/// before Christ, not the historical year numbering.

@@ -1,0 +1,116 @@
+﻿using System;
+
+namespace NSwissEph
+{
+	public readonly struct JulianDayNumber
+	{
+		private readonly double _julianDay;
+
+		private JulianDayNumber(double jd)
+		{
+			_julianDay = jd;
+		}
+
+		/// <summary>
+		/// This function returns the absolute Julian day number (JD) for a given calendar date.
+		/// </summary>
+		/// <param name="isGregorian">if true, Gregorian calendar is assumed, else Julian calendar is assumed</param>
+		/// <remarks>
+		/// The Julian day number is a system of numbering all days continously
+		/// within the time range of known human history. It should be familiar
+		/// to every astrological or astronomical programmer. The time variable
+		/// in astronomical theories is usually expressed in Julian days or
+		/// Julian centuries (36525 days per century) relative to some start day;
+		/// the start day is called 'the epoch'.
+		/// The Julian day number is a double representing the number of
+		/// days since JD = 0.0 on 1 Jan -4712, 12:00 noon(in the Julian calendar).
+		/// 
+		/// Midnight has always a JD with fraction .5, because traditionally
+		/// the astronomical day started at noon.This was practical because
+		/// then there was no change of date during a night at the telescope.
+		/// From this comes also the fact the noon ephemerides were printed
+		/// before midnight ephemerides were introduced early in the 20th century.
+		/// 
+		/// NOTE: The Julian day number must not be confused with the Julian calendar system.
+		/// 
+		/// Be aware the we always use astronomical year numbering for the years
+		/// before Christ, not the historical year numbering.
+		/// Astronomical years are done with negative numbers, historical
+		/// years with indicators BC or BCE (before common era).
+		/// Year 0 (astronomical)  	= 1 BC
+		/// year -1 (astronomical) 	= 2 BC
+		/// etc.
+		/// 
+		/// Original author: Marc Pottenger, Los Angeles.
+		/// with bug fix for year< -4711   15-aug-88 by Alois Treindl
+		/// 
+		/// References: Oliver Montenbruck, Grundlagen der Ephemeridenrechnung,
+		/// Verlag Sterne und Weltraum (1987), p.49 ff</remarks>
+		public static JulianDayNumber FromDate(DateTime dt, bool isGregorian = true)
+		{
+			double year = dt.Year;
+			double month = dt.Month + 1.0;
+			if (dt.Month < 3)
+			{
+				year -= 1.0;
+				month += 12.0;
+			}
+			double julianYear = year + 4712.0;
+			double jd = Math.Floor(julianYear * 365.25)
+				+ Math.Floor(30.6 * month + 0.000001)
+				+ dt.Day
+				+ dt.TimeOfDay.TotalHours / 24.0
+				- 63.5;
+			if (isGregorian)
+			{
+				double leapYears = Math.Floor(Math.Abs(year) / 100.0) - Math.Floor(Math.Abs(year) / 400.0);
+				if (year < 0.0)
+					leapYears = -leapYears;
+				jd = jd - leapYears + 2;
+				if ((year < 0.0) && (year / 100.0 == Math.Floor(year / 100.0)) && (year / 400.0 != Math.Floor(year / 400.0)))
+					jd -= 1;
+			}
+			return new JulianDayNumber(jd);
+		}
+
+		/// <summary>
+		/// This function returns the UTC date for a current absolute Julian day number (JD).
+		/// </summary>
+		/// <param name="isGregorian">if true, Gregorian calendar is assumed, else Julian calendar is assumed</param>
+		/// <remarks>
+		/// Be aware the we use astronomical year numbering for the years
+		/// before Christ, not the historical year numbering.
+		/// Astronomical years are done with negative numbers, historical
+		/// years with indicators BC or BCE (before common era).
+		/// Year  0 (astronomical)  	= 1 BC historical year
+		/// year -1 (astronomical) 	= 2 BC historical year
+		/// year -234 (astronomical) 	= 235 BC historical year
+		/// etc.
+		/// 
+		/// Original author Mark Pottenger, Los Angeles.
+		/// with bug fix for year< -4711 16-aug-88 Alois Treindl</remarks>
+		public DateTime ToDate(bool isGregorian = true)
+		{
+			double allDays = _julianDay + 32082.5;
+			if (isGregorian)
+			{
+				double leapYears = allDays + Math.Floor(allDays / 36525.0) - Math.Floor(allDays / 146100.0) - 38.0;
+				if (_julianDay >= 1830691.5)
+					leapYears += 1;
+				allDays = allDays + Math.Floor(leapYears / 36525.0) - Math.Floor(leapYears / 146100.0) - 38.0;
+			}
+			allDays = Math.Floor(allDays + 123.0);
+			double years = Math.Floor((allDays - 122.2) / 365.25);
+			double months = Math.Floor((allDays - Math.Floor(365.25 * years)) / 30.6001);
+			var month = (int)(months - 1.0);
+			if (month > 12)
+				month -= 12;
+			var day = (int)(allDays - Math.Floor(365.25 * years) - Math.Floor(30.6001 * months));
+			var year = (int)(years + Math.Floor((months - 2.0) / 12.0) - 4800);
+			var time = (_julianDay - Math.Floor(_julianDay + 0.5) + 0.5) * 24.0;
+			var t = TimeSpan.FromHours(time);
+
+			return new DateTime(year, month, day, t.Hours, t.Minutes, t.Seconds, DateTimeKind.Utc);
+		}
+	}
+}

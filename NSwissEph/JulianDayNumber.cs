@@ -4,6 +4,31 @@ namespace NSwissEph
 {
 	public readonly struct JulianDayNumber
 	{
+		/// <summary>
+		/// 2000 January 1.5
+		/// </summary>
+		public static readonly JulianDayNumber J2000 = new JulianDayNumber(2451545.0);
+
+		/// <summary>
+		/// 1950 January 0.923
+		/// </summary>
+		public static readonly JulianDayNumber B1950 = new JulianDayNumber(2433282.42345905);
+
+		/// <summary>
+		/// 1900 January 0.5
+		/// </summary>
+		public static readonly JulianDayNumber J1900 = new JulianDayNumber(2415020.0);
+
+		/// <summary>
+		/// 1955 January 1
+		/// </summary>
+		public static readonly JulianDayNumber J1955 = new JulianDayNumber(2435108.5);
+
+		/// <summary>
+		/// 1952 April 5
+		/// </summary>
+		public static readonly JulianDayNumber J1952_05_04 = new JulianDayNumber(2434108.5);
+
 		private readonly double _julianDay;
 
 		private JulianDayNumber(double jd)
@@ -114,5 +139,31 @@ namespace NSwissEph
 
 			return new DateTime(year, month, day, t.Hours, t.Minutes, t.Seconds, DateTimeKind.Utc);
 		}
+
+		public double GetYear() => 2000.0 + (this - J2000)._julianDay / 365.25;
+
+		public double GetGregorianYear() => 2000.0 + (this - J2000)._julianDay / 365.2425;
+
+		public static JulianDayNumber operator +(JulianDayNumber a, JulianDayNumber b) =>
+			new JulianDayNumber(a._julianDay + b._julianDay);
+
+		public static JulianDayNumber operator -(JulianDayNumber a, JulianDayNumber b) =>
+			new JulianDayNumber(a._julianDay - b._julianDay);
+
+		public static bool operator <(JulianDayNumber a, JulianDayNumber b) =>
+			a._julianDay < b._julianDay;
+
+		public static bool operator >(JulianDayNumber a, JulianDayNumber b) =>
+			a._julianDay > b._julianDay;
+
+		public static bool operator <=(JulianDayNumber a, JulianDayNumber b) =>
+			a._julianDay <= b._julianDay;
+
+		public static bool operator >=(JulianDayNumber a, JulianDayNumber b) =>
+			a._julianDay >= b._julianDay;
+
+		public static explicit operator double (JulianDayNumber d) => d._julianDay;
+
+		internal static JulianDayNumber FromRaw(double value) => new JulianDayNumber(value);
 	}
 }

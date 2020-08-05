@@ -1,8 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-
-namespace NSwissEph
+﻿namespace NSwissEph.DeltaT
 {
 	internal class DeltaTStephensonEtc2016
 	{

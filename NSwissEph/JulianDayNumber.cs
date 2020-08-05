@@ -144,6 +144,8 @@ namespace NSwissEph
 
 		public double GetGregorianYear() => 2000.0 + (this - J2000)._julianDay / 365.2425;
 
+		public double GetJulianYear() => 2000 + (_julianDay - 2451557.5) / 365.25;
+
 		public static JulianDayNumber operator +(JulianDayNumber a, JulianDayNumber b) =>
 			new JulianDayNumber(a._julianDay + b._julianDay);
 

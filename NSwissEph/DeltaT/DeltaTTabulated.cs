@@ -1,4 +1,6 @@
-﻿namespace NSwissEph.DeltaT
+﻿using System;
+
+namespace NSwissEph.DeltaT
 {
 	internal static class DeltaTTabulated
 	{
@@ -100,6 +102,128 @@
 			var dd = (year - Tab2End) / B;
 			var ans = dt2[iy] + dd * (dt[0] - dt2[iy]);
 			ans = TidalAcceleration.AdjustForTidalAcceleration(ans, gregorianYear, tidalAcceleration, TidalAccelerationMode.Const26, false);
+			return ans / 86400.0;
+		}
+
+		/// <summary>
+		/// The tabulated values of deltaT, in hundredths of a second,
+		/// were taken from The Astronomical Almanac 1997etc., pp.K8-K9.
+		/// Some more recent values are taken from IERS
+		/// http://maia.usno.navy.mil/ser7/deltat.data .
+		/// </summary>
+		/// <remarks>
+		/// Bessel's interpolation formula is implemented to obtain fourth 
+		/// order interpolated values at intermediate times.
+		/// The values are adjusted depending on the ephemeris used
+		/// and its inherent value of secular tidal acceleration ndot.
+		/// Note by Dieter Jan. 2017:
+		/// Bessel interpolation assumes equidistant sampling points. However the
+		/// sampling points are not equidistant, because they are for first January of
+		/// every year and years can have either 365 or 366 days.The interpolation uses
+		/// a step width of 365.25 days.As a consequence, in three out of four years
+		/// the interpolation does not reproduce the exact values of the sampling points
+		/// on the days they refer to.
+		/// </remarks>
+		/// <see cref="deltat_aa"/>
+		public static double Calc(JulianDayNumber tjd, double tid_acc, DeltaTMode mode)
+		{
+			double ans, ans2 = 0, ans3;
+			double p, B, B2, Y, dd;
+			double[] d = new double[6];
+			int i, iy, k;
+			Y = tjd.GetYear();
+			if (Y <= TabEnd)
+			{
+				// Index into the table.
+				p = Math.Floor(Y);
+				iy = (int)(p - TabStart);
+				/* Zeroth order estimate is value at start of year */
+				ans = dt[iy];
+				k = iy + 1;
+				if (k >= TabSize)
+					goto done; /* No data, can't go on. */
+				/* The fraction of tabulation interval */
+				p = Y - p;
+				/* First order interpolated value */
+				ans += p * (dt[k] - dt[iy]);
+				if ((iy - 1 < 0) || (iy + 2 >= TabSize))
+					goto done; /* can't do second differences */
+				/* Make table of first differences */
+				k = iy - 2;
+				for (i = 0; i < 5; i++)
+				{
+					if ((k < 0) || (k + 1 >= TabSize))
+						d[i] = 0;
+					else
+						d[i] = dt[k + 1] - dt[k];
+					k += 1;
+				}
+				/* Compute second differences */
+				for (i = 0; i < 4; i++)
+					d[i] = d[i + 1] - d[i];
+				B = 0.25 * p * (p - 1.0);
+				ans += B * (d[1] + d[2]);
+				if (iy + 2 >= TabSize)
+					goto done;
+				/* Compute third differences */
+				for (i = 0; i < 3; i++)
+					d[i] = d[i + 1] - d[i];
+				B = 2.0 * B / 3.0;
+				ans += (p - 0.5) * B * d[1];
+				if ((iy - 2 < 0) || (iy + 3 > TabSize))
+					goto done;
+				/* Compute fourth differences */
+				for (i = 0; i < 2; i++)
+					d[i] = d[i + 1] - d[i];
+				B = 0.125 * B * (p + 1.0) * (p - 2.0);
+				ans += B * (d[0] + d[1]);
+			done:
+				ans = TidalAcceleration.AdjustForTidalAcceleration(ans, Y, tid_acc, TidalAccelerationMode.Const26, false);
+				return ans / 86400.0;
+			}
+			/* today - future: 
+			 * 3rd degree polynomial based on data given by 
+			 * Stephenson/Morrison/Hohenkerk 2016 here:
+			 * http://astro.ukho.gov.uk/nao/lvm/
+			 */
+			if (mode == DeltaTMode.Stephenson_Etc_2016)
+			{
+				B = Y - 2000;
+				if (Y < 2500)
+				{
+					ans = B * B * B * 121.0 / 30000000.0 + B * B / 1250.0 + B * 521.0 / 3000.0 + 64.0;
+					/* for slow transition from tablulated data */
+					B2 = TabEnd - 2000;
+					ans2 = B2 * B2 * B2 * 121.0 / 30000000.0 + B2 * B2 / 1250.0 + B2 * 521.0 / 3000.0 + 64.0;
+					/* we use a parable after 2500 */
+				}
+				else
+				{
+					B = 0.01 * (Y - 2000);
+					ans = B * B * 32.5 + 42.5;
+				}
+				/* 
+				 * Formula Stephenson (1997; p. 507),
+				 * with modification to avoid jump at end of AA table,
+				 * similar to what Meeus 1998 had suggested.
+				 * Slow transition within 100 years.
+				 */
+			}
+			else
+			{
+				B = 0.01 * (Y - 1820);
+				ans = -20 + 31 * B * B;
+				/* for slow transition from tablulated data */
+				B2 = 0.01 * (TabEnd - 1820);
+				ans2 = -20 + 31 * B2 * B2;
+			}
+			/* slow transition from tabulated values to Stephenson formula: */
+			if (Y <= TabEnd + 100)
+			{
+				ans3 = dt[TabSize - 1];
+				dd = (ans2 - ans3);
+				ans += dd * (Y - (TabEnd + 100)) * 0.01;
+			}
 			return ans / 86400.0;
 		}
 	}

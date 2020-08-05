@@ -101,15 +101,13 @@ namespace NSwissEph.DeltaT
 		/// files made accessible through swe_set_ephe_path() or swe_set_jplfile().
 		/// If ephemerisMode is null, then the default tidal acceleration is ussed(i.e. that of DE431).
 		/// </remarks>
+		/// <see cref="calc_deltat"/>
 		/// <returns>DeltaT (ET - UT) in days</returns>
 		public static double Calc(JulianDayNumber julianDay, DeltaTMode deltaTMode, EphemerisMode? ephemerisMode)
 		{
 			var tidalAcceleration = ephemerisMode is null
 				? TidalAcceleration.Get(JPLDENumber.Default)
 				: TidalAcceleration.Calculate(ephemerisMode.Value, julianDay, JPLDENumber.Auto);
-
-			var year = julianDay.GetYear();
-			var gregorianYear = julianDay.GetGregorianYear();
 
 			if (deltaTMode == DeltaTMode.Stephenson_Etc_2016 && julianDay < JulianDayNumber.J1955)
 			{
@@ -124,6 +122,8 @@ namespace NSwissEph.DeltaT
 				return DeltaTEspenakMeeus1620.Calc(julianDay, tidalAcceleration);
 			}
 
+			var year = julianDay.GetYear();
+
 			// delta t model used in SE 1.72 - 1.76: Stephenson & Morrison 2004; before 1620
 			if (deltaTMode == DeltaTMode.Stephenson_Morrison_2004 && year < DeltaTTabulated.TabStart)
 			{
@@ -133,8 +133,39 @@ namespace NSwissEph.DeltaT
 				else
 					// between 1600 and 1620:
 					// linear interpolation between end of table dt2 and start of table dt
-					return DeltaTTabulated.CalcInterpolated(year, gregorianYear, tidalAcceleration);
+					return DeltaTTabulated.CalcInterpolated(year, julianDay.GetGregorianYear(), tidalAcceleration);
 			}
+
+			/* delta t model used before SE 1.64: 
+			* Stephenson/Morrison 1984 with Borkowski 1988; 
+			* before 1620 */
+			if (deltaTMode == DeltaTMode.Stephenson_Morrison_1984 && year < DeltaTTabulated.TabStart)
+			{
+				double B;
+				double ans;
+				if (year >= 948.0)
+				{
+					/* Stephenson and Morrison, stated domain is 948 to 1600:
+					 * 25.5(centuries from 1800)^2 - 1.9159(centuries from 1955)^2 */
+					B = 0.01 * (year - 2000.0);
+					ans = (23.58 * B + 100.3) * B + 101.6;
+				}
+				else
+				{
+					/* Borkowski, before 948 and between 1600 and 1620 */
+					B = 0.01 * (year - 2000.0) + 3.75;
+					ans = 35.0 * B * B + 40.0;
+				}
+				return ans / 86400.0;
+			}
+
+			/* 1620 - today + a few years (tabend):
+			* Tabulated values of deltaT from Astronomical Almanac 
+			* (AA 1997etc., pp. K8-K9) and from IERS  
+			* (http://maia.usno.navy.mil/ser7/deltat.data).
+			*/
+			if (year >= DeltaTTabulated.TabStart)
+				return DeltaTTabulated.Calc(julianDay, tidalAcceleration, deltaTMode);
 
 			return 0;
 		}

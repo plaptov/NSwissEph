@@ -20,21 +20,19 @@ namespace NSwissEph.SwephFiles
 
 		public SEFileType FileType { get; }
 
-		public string Version { get; private set; }
-
-		public string FileName { get; private set; }
-
-		public string Copyright { get; private set; }
-
 		public bool NeedBytesReorder { get; private set; }
 
 		public bool IsLittleEndian { get; private set; }
 
-		public void ReadConsts()
+		public SEFileData ReadConsts()
 		{
-			Version = ReadString();
-			FileName = ReadString();
-			Copyright = ReadString();
+			var data = new SEFileData()
+			{
+				FileType = FileType,
+				Version = ReadString(),
+				FileName = ReadString(),
+				Copyright = ReadString(),
+			};
 			// orbital elements, if single asteroid
 			if (FileType == SEFileType.AdditionalAsteroid)
 			{
@@ -43,7 +41,21 @@ namespace NSwissEph.SwephFiles
 			}
 			ReadBytesOrder();
 			CheckFileLength();
+			data.DENumber = ReadDENumber();
+			(data.StartDate, data.EndDate) = ReadFilePeriod();
+			data.PlanetNumbers = ReadPlanetNumbers();
+			if (FileType == SEFileType.AdditionalAsteroid)
+			{
+				ReadAsteroidName();
+			}
+			CheckCRC();
+			ReadGeneralConsts();
+			ReadPlanetConstants();
+
+			return data;
 		}
+
+		#region File parts
 
 		private void ReadBytesOrder()
 		{
@@ -66,7 +78,7 @@ namespace NSwissEph.SwephFiles
 
 		private void CheckFileLength()
 		{
-			var buff = ReadData(4, 1, 4);
+			var buff = ReadData(4);
 			int length = BitConverter.ToInt32(buff, 0);
 			var currentPosition = _stream.Position;
 			_stream.Seek(0, SeekOrigin.End);
@@ -74,6 +86,88 @@ namespace NSwissEph.SwephFiles
 				throw new FormatException();
 			_stream.Seek(currentPosition, SeekOrigin.Begin);
 		}
+
+		private JPLDENumber ReadDENumber()
+		{
+			var buff = ReadData(4);
+			var i = BitConverter.ToInt32(buff, 0);
+			return (JPLDENumber)i;
+		}
+
+		/// <summary>
+		/// start and end epoch of file 
+		/// </summary>
+		private (JulianDayNumber, JulianDayNumber) ReadFilePeriod()
+		{
+			var buff = ReadData(8, 2);
+			double start = BitConverter.ToDouble(buff, 0);
+			double end = BitConverter.ToDouble(buff, 8);
+			return (JulianDayNumber.FromRaw(start), JulianDayNumber.FromRaw(end));
+		}
+
+		private int[] ReadPlanetNumbers()
+		{
+			int numberSize = 2;
+			var buff = ReadData(2);
+			short numberPlanets = BitConverter.ToInt16(buff, 0);
+			if (numberPlanets > 256)
+			{
+				numberSize = 4;
+				numberPlanets %= 256;
+			}
+			if (numberPlanets < 1 || numberPlanets > 20)
+				throw new FormatException();
+
+			buff = ReadData(numberSize, numberPlanets, 4);
+			var result = new int[numberPlanets];
+			int j = 0;
+			for (int i = 0; i < buff.Length; i+=4)
+			{
+				result[j++] = BitConverter.ToInt32(buff, i); 
+			}
+			return result;
+		}
+
+		private void ReadAsteroidName()
+		{
+			// TODO
+			ReadData(30);
+		}
+
+		private void CheckCRC()
+		{
+			var currentPosition = _stream.Position;
+			if (currentPosition - 1 > 2 * MaxChars)
+				throw new FormatException();
+
+			var buff = ReadData(4);
+			uint crc = BitConverter.ToUInt32(buff, 0);
+
+			_stream.Seek(0L, SeekOrigin.Begin);
+			buff = new byte[currentPosition];
+			_stream.Read(buff, 0, (int)currentPosition);
+
+			if (Crc32.CalcCrc(buff, buff.Length) != crc)
+				throw new FormatException();
+
+			_stream.Seek(currentPosition + 4, SeekOrigin.Begin);
+		}
+
+		private void ReadGeneralConsts()
+		{
+			/* clight, aunit, helgravconst, ratme, sunradius 
+			* these constants are currently not in use */
+			ReadData(8, 5);
+		}
+
+		private void ReadPlanetConstants()
+		{
+			// TBD
+		}
+
+		#endregion
+
+		#region Service methods
 
 		private string ReadString()
 		{
@@ -89,6 +183,9 @@ namespace NSwissEph.SwephFiles
 			}
 			throw new FormatException();
 		}
+
+		private byte[] ReadData(int size, int count = 1) =>
+			ReadData(size, count, correctedSize: size);
 
 		/// <summary>
 		/// Reads from a file and, if necessary, reorders bytes 
@@ -126,5 +223,7 @@ namespace NSwissEph.SwephFiles
 			}
 			return result;
 		}
+
+		#endregion
 	}
 }

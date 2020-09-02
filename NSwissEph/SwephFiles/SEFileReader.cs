@@ -166,8 +166,8 @@ namespace NSwissEph.SwephFiles
 
 				pdp.InternalBodyNumber = ipli;
 				pdp.FileIndexStart = ReadInt32();
-				pdp.Flags = (PlanetFlags)ReadInt32();
-				pdp.CoefficientsNumber = ReadInt32();
+				pdp.Flags = (PlanetFlags)_stream.ReadByte();
+				pdp.CoefficientsNumber = _stream.ReadByte();
 				pdp.NormalizationFactor = ReadInt32() / 1000.0;
 				var doubles = ReadDoubles(10);
 				pdp.StartDate = JulianDayNumber.FromRaw(doubles[0]);
@@ -198,7 +198,7 @@ namespace NSwissEph.SwephFiles
 				var b = _stream.ReadByte();
 				bytes.Add((byte)b);
 				if (b == 0x0A)
-					return Encoding.UTF8.GetString(bytes.ToArray());
+					return Encoding.UTF8.GetString(bytes.ToArray()).TrimEnd();
 				count++;
 			}
 			throw new FormatException();

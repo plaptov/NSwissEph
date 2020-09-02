@@ -1,7 +1,9 @@
 ﻿using System;
+using System.Diagnostics;
 
 namespace NSwissEph
 {
+	[DebuggerDisplay("{" + nameof(ToString) + "(),nq}")]
 	public readonly struct JulianDayNumber
 	{
 		/// <summary>
@@ -167,5 +169,12 @@ namespace NSwissEph
 		public static explicit operator double (JulianDayNumber d) => d._julianDay;
 
 		internal static JulianDayNumber FromRaw(double value) => new JulianDayNumber(value);
+
+		public override string ToString()
+		{
+			if (_julianDay == 0.0)
+				return "(zero)";
+			return ToDate().ToString();
+		}
 	}
 }

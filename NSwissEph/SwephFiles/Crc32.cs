@@ -20,12 +20,14 @@
 		/// </summary>
 		static Crc32()
 		{
-			int i, j;
-			uint c;
-			for (i = 0; i < 256; ++i)
+			Crc32Table = new uint[256];
+			for (int i = 0; i < 256; i++)
 			{
-				for (c = (uint)(i << 24), j = 8; j > 0; --j)
-					c = (c & 0x80000000) > 0 ? (c << 1) ^ CRC32_POLY : (c << 1);
+				uint c = (uint)(i << 24);
+				for (int j = 0; j < 8; j++)
+					c = (c & 0x80000000) > 0
+						? (c << 1) ^ CRC32_POLY
+						: (c << 1);
 				Crc32Table[i] = c;
 			}
 		}

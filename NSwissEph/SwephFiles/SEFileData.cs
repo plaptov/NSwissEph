@@ -10,11 +10,7 @@ namespace NSwissEph.SwephFiles
 	{
 		public SEFileData()
 		{
-			PlanetsData = Enum
-				.GetValues(typeof(InternalPlanets))
-				.Cast<InternalPlanets>()
-				.Distinct()
-				.ToDictionary(p => p, _ => new PlanetData());
+			PlanetsData = new Dictionary<InternalPlanets, PlanetData>();
 		}
 
 		public SEFileType FileType { get; set; }
@@ -34,6 +30,6 @@ namespace NSwissEph.SwephFiles
 		// TODO Make enum
 		public IReadOnlyCollection<int> PlanetNumbers { get; set; }
 
-		internal IReadOnlyDictionary<InternalPlanets, PlanetData> PlanetsData { get; }
+		internal Dictionary<InternalPlanets, PlanetData> PlanetsData { get; }
 	}
 }

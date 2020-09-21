@@ -15,10 +15,25 @@ namespace NSwissEph.Tests
 		[Test]
 		public void ReadPlanetsFile()
 		{
-			using var stream = new MemoryStream(TestFiles.sepl_18, writable: false);
+			using var stream = SEFiles.GetPlanetsFileStream();
 			var reader = new SEFileReader(stream, SEFileType.Planet);
 			var data = reader.ReadConsts();
-			
+		}
+
+		[Test]
+		public void ReadMoonFile()
+		{
+			using var stream = SEFiles.GetMoonFileStream();
+			var reader = new SEFileReader(stream, SEFileType.Moon);
+			var data = reader.ReadConsts();
+		}
+
+		[Test]
+		public void ReadAsteroidsFile()
+		{
+			using var stream = SEFiles.GetAsteroidsFileStream();
+			var reader = new SEFileReader(stream, SEFileType.Asteroid);
+			var data = reader.ReadConsts();
 		}
 	}
 }

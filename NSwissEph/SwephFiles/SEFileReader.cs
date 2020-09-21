@@ -160,9 +160,7 @@ namespace NSwissEph.SwephFiles
 		{
 			foreach (var ipli in data.PlanetNumbers)
 			{
-				var pdp = ipli >= SEConsts.AseroidOffset
-					? data.PlanetsData[InternalPlanets.AnyBody]
-					: data.PlanetsData[(InternalPlanets)ipli];
+				var pdp = new PlanetData();
 
 				pdp.InternalBodyNumber = ipli;
 				pdp.FileIndexStart = ReadInt32();
@@ -183,6 +181,11 @@ namespace NSwissEph.SwephFiles
 				pdp.DPerigee = doubles[9];
 				if (pdp.Flags.HasFlag(PlanetFlags.Ellipse))
 					pdp.ReferenceEllipseCoefficients = ReadDoubles(2 * pdp.CoefficientsNumber);
+
+				var index = ipli >= SEConsts.AseroidOffset
+					? InternalPlanets.AnyBody
+					: (InternalPlanets)ipli;
+				data.PlanetsData[index] = pdp;
 			}
 		}
 

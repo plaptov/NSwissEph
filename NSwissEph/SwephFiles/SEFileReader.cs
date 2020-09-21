@@ -191,6 +191,117 @@ namespace NSwissEph.SwephFiles
 
 		#endregion
 
+		internal SEFileSegment ReadSegment(PlanetData pdp, JulianDayNumber jd)
+		{
+			int segmentNumber = (int)((jd - pdp.StartDate).Raw / pdp.SegmentSize);
+			var segmentStart = pdp.StartDate + JulianDayNumber.FromRaw(pdp.SegmentSize * segmentNumber);
+			var segmentEnd = segmentStart + JulianDayNumber.FromRaw(pdp.SegmentSize);
+
+			var fpos = pdp.FileIndexStart + segmentNumber * 3;
+			fpos = ReadInt32From3Bytes(fpos);
+			_stream.Seek(fpos, SeekOrigin.Begin);
+
+			var rmax = pdp.NormalizationFactor;
+			double[] segp = new double[pdp.CoefficientsNumber * 3];
+			// read coefficients for 3 coordinates
+			for (var icoord = 0; icoord < 3; icoord++)
+			{
+				var idbl = icoord * pdp.CoefficientsNumber;
+				// first read header
+				// first bit indicates number of sizes of packed coefficients
+				int nco;
+				int nsizes;
+				int[] nsize = new int[6];
+				var c = ReadData(1, 2);
+				if ((c[0] & 128) > 0)
+				{
+					var c2 = ReadData(1, 2);
+					nsizes = 6;
+					nsize[0] = c[1] / 16;
+					nsize[1] = c[1] % 16;
+					nsize[2] = c2[0] / 16;
+					nsize[3] = c2[0] % 16;
+					nsize[4] = c2[1] / 16;
+					nsize[5] = c2[1] % 16;
+					nco = nsize[0] + nsize[1] + nsize[2] + nsize[3] + nsize[4] + nsize[5];
+				}
+				else
+				{
+					nsizes = 4;
+					nsize[0] = c[0] / 16;
+					nsize[1] = c[0] % 16;
+					nsize[2] = c[1] / 16;
+					nsize[3] = c[1] % 16;
+					nco = nsize[0] + nsize[1] + nsize[2] + nsize[3];
+				}
+				// there may not be more coefficients than interpolation order + 1
+				if (nco > pdp.CoefficientsNumber)
+					throw new FormatException($"Error in ephemeris file: {nco} coefficients instead of {pdp.CoefficientsNumber}");
+
+				// now unpack
+				for (var i = 0; i < nsizes; i++)
+				{
+					if (nsize[i] == 0)
+						continue;
+
+					if (i < 4)
+					{
+						int j = 4 - i;
+						int k = nsize[i];
+						var longs = ReadUints(j, k);
+						for (int m = 0; m < k; m++)
+						{
+							if ((longs[m] & 1) > 0) // will be negative
+								segp[idbl] = -(((longs[m] + 1) / 2) / 1e+9 * rmax / 2);
+							else
+								segp[idbl] = (longs[m] / 2) / 1e+9 * rmax / 2;
+							idbl++;
+						}
+					}
+					else if (i == 4) // half byte packing
+					{
+						int k = (nsize[i] + 1) / 2;
+						var longs = ReadUints(1, k);
+						for (int m = 0, j = 0;
+							m < k && j < nsize[i];
+							m++)
+						{
+							for (int n = 0, o = 16;
+								n < 2 && j < nsize[i];
+								n++, j++, idbl++, longs[m] %= (uint)o, o /= 16)
+							{
+								if ((longs[m] & o) > 0)
+									segp[idbl] = -(((longs[m] + o) / o / 2) * rmax / 2 / 1e+9);
+								else
+									segp[idbl] = (longs[m] / o / 2) * rmax / 2 / 1e+9;
+							}
+						}
+					}
+					else if (i == 5) // quarter byte packing
+					{
+						int k = (nsize[i] + 3) / 4;
+						var longs = ReadUints(1, k);
+						for (int m = 0, j = 0;
+							m < k && j < nsize[i];
+							m++)
+						{
+							for (int n = 0, o = 64;
+								n < 4 && j < nsize[i];
+								n++, j++, idbl++, longs[m] %= (uint)o, o /= 4)
+							{
+								if ((longs[m] & o) > 0)
+									segp[idbl] = -(((longs[m] + o) / o / 2) * rmax / 2 / 1e+9);
+								else
+									segp[idbl] = (longs[m] / o / 2) * rmax / 2 / 1e+9;
+							}
+						}
+					}
+				}
+			}
+
+			return new SEFileSegment(segmentStart, segmentEnd, segp);
+		}
+
 		#region Service methods
 
 		private string ReadString()
@@ -210,12 +321,23 @@ namespace NSwissEph.SwephFiles
 
 		private int ReadInt32() => BitConverter.ToInt32(ReadData(4), 0);
 
+		private int ReadInt32From3Bytes(long? offset) => BitConverter.ToInt32(ReadData(3, 1, 4, offset), 0);
+
 		private double[] ReadDoubles(int count)
 		{
 			var buff = ReadData(8, count);
 			var result = new double[count];
 			for (int i = 0; i < count; i++)
 				result[i] = BitConverter.ToDouble(buff, i * 8);
+			return result;
+		}
+
+		private uint[] ReadUints(int size, int count)
+		{
+			var buff = ReadData(size, count, 4);
+			var result = new uint[count];
+			for (int i = 0; i < count; i++)
+				result[i] = BitConverter.ToUInt32(buff, i * 4);
 			return result;
 		}
 

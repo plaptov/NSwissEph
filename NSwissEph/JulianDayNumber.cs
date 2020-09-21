@@ -38,6 +38,8 @@ namespace NSwissEph
 			_julianDay = jd;
 		}
 
+		internal double Raw => _julianDay;
+
 		/// <summary>
 		/// This function returns the absolute Julian day number (JD) for a given calendar date.
 		/// </summary>

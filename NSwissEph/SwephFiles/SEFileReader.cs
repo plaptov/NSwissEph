@@ -181,7 +181,8 @@ namespace NSwissEph.SwephFiles
 				pdp.Dqrot = doubles[7];
 				pdp.Perigee = doubles[8];
 				pdp.DPerigee = doubles[9];
-				pdp.ReferenceEllipseCoefficients = ReadDoubles(2 * pdp.CoefficientsNumber);
+				if (pdp.Flags.HasFlag(PlanetFlags.Ellipse))
+					pdp.ReferenceEllipseCoefficients = ReadDoubles(2 * pdp.CoefficientsNumber);
 			}
 		}
 

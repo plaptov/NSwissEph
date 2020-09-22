@@ -191,6 +191,12 @@ namespace NSwissEph.SwephFiles
 
 		#endregion
 
+		/// <summary>
+		/// Fetch chebyshew coefficients from sweph file
+		/// </summary>
+		/// <param name="pdp">Planet</param>
+		/// <param name="jd">Time</param>
+		/// <see cref="get_new_segment"/>
 		internal SEFileSegment ReadSegment(PlanetData pdp, JulianDayNumber jd)
 		{
 			int segmentNumber = (int)((jd - pdp.StartDate).Raw / pdp.SegmentSize);
@@ -299,7 +305,112 @@ namespace NSwissEph.SwephFiles
 				}
 			}
 
-			return new SEFileSegment(segmentStart, segmentEnd, segp);
+			var segment = new SEFileSegment(segmentStart, segmentEnd, segp);
+			if (pdp.Flags.HasFlag(PlanetFlags.Rotate))
+				RotateBack(pdp, segment);
+			return segment;
+		}
+
+		/// <summary>
+		/// <c>rot_back</c>
+		/// Adds reference orbit to chebyshew series (if SEI_FLG_ELLIPSE),
+		/// rotates series to mean equinox of J2000
+		/// </summary>
+		private void RotateBack(PlanetData pdp, SEFileSegment segment)
+		{
+			int nco = pdp.CoefficientsNumber;
+			var t = segment.Start.Raw + pdp.SegmentSize / 2;
+			// data align: chcfx double[nco] + chcfy double[nco] + chcfz double[nco]
+			// allsize: nco * 3
+			var segp = segment.Coefficients;
+			var chcfx = new Span<double>(segp, 0, nco);
+			var chcfy = new Span<double>(segp, nco, nco);
+			var chcfz = new Span<double>(segp, nco * 2, nco);
+			var tdiff = (t - pdp.ElementsEpoch) / 365250.0;
+			double qav, pav;
+			if (pdp.InternalBodyNumber == (int)InternalPlanets.Moon)
+			{
+				var dn = pdp.Prot + tdiff * pdp.Dprot;
+				var i = (int)(dn / Consts.TwoPi);
+				dn -= i * Consts.TwoPi;
+				qav = (pdp.Qrot + tdiff * pdp.Dqrot) * Math.Cos(dn);
+				pav = (pdp.Qrot + tdiff * pdp.Dqrot) * Math.Sin(dn);
+			}
+			else
+			{
+				qav = pdp.Qrot + tdiff * pdp.Dqrot;
+				pav = pdp.Prot + tdiff * pdp.Dprot;
+			}
+			// calculate cosine and sine of average perihelion longitude.
+			var x = new double[nco, 3];
+			for (int i = 0; i < nco; i++)
+			{
+				x[i, 0] = chcfx[i];
+				x[i, 1] = chcfy[i];
+				x[i, 2] = chcfz[i];
+			}
+			if (pdp.Flags.HasFlag(PlanetFlags.Ellipse))
+			{
+				var refepx = new Span<double>(pdp.ReferenceEllipseCoefficients, 0, nco);
+				var refepy = new Span<double>(pdp.ReferenceEllipseCoefficients, nco, nco);
+				var omtild = pdp.Perigee + tdiff + pdp.DPerigee;
+				int i = (int)(omtild / Consts.TwoPi);
+				omtild -= i * Consts.TwoPi;
+				var com = Math.Cos(omtild);
+				var som = Math.Sin(omtild);
+				// add reference orbit.
+				for (i = 0; i < nco; i++)
+				{
+					x[i, 0] = chcfx[i] + com * refepx[i] - som * refepy[i];
+					x[i, 1] = chcfy[i] + com * refepy[i] + som * refepx[i];
+				}
+			}
+
+			/* construct right handed orthonormal system with first axis along
+			 origin of longitudes and third axis along angular momentum    
+			 this uses the standard formulas for equinoctal variables   
+			 (see papers by broucke and by cefola).      */
+			var cosih2 = 1.0 / (1.0 + qav * qav + pav * pav);
+			//     calculate orbit pole.
+			Span<double> uiz = stackalloc double[3];
+			uiz[0] = 2.0 * pav * cosih2;
+			uiz[1] = -2.0 * qav * cosih2;
+			uiz[2] = (1.0 - qav * qav - pav * pav) * cosih2;
+			//     calculate origin of longitudes vector.
+			Span<double> uix = stackalloc double[3];
+			uix[0] = (1.0 + qav * qav - pav * pav) * cosih2;
+			uix[1] = 2.0 * qav * pav * cosih2;
+			uix[2] = -2.0 * pav * cosih2;
+			//     calculate vector in orbital plane orthogonal to origin of longitudes.
+			Span<double> uiy = stackalloc double[3];
+			uiy[0] = 2.0 * qav * pav * cosih2;
+			uiy[1] = (1.0 - qav * qav + pav * pav) * cosih2;
+			uiy[2] = 2.0 * qav * cosih2;
+			//     rotate to actual orientation in space.
+			for (var i = 0; i < nco; i++)
+			{
+				var xrot = x[i,0] * uix[0] + x[i,1] * uiy[0] + x[i,2] * uiz[0];
+				var yrot = x[i,0] * uix[1] + x[i,1] * uiy[1] + x[i,2] * uiz[1];
+				var zrot = x[i,0] * uix[2] + x[i,1] * uiy[2] + x[i,2] * uiz[2];
+				if (Math.Abs(xrot) + Math.Abs(yrot) + Math.Abs(zrot) >= 1e-14)
+					pdp.EvaluateCoefficientsCount = i;
+				x[i,0] = xrot;
+				x[i,1] = yrot;
+				x[i,2] = zrot;
+				if (pdp.InternalBodyNumber == (int)InternalPlanets.Moon)
+				{
+					/* rotate to j2000 equator */
+					x[i,1] = ceps2000 * yrot - seps2000 * zrot;
+					x[i,2] = seps2000 * yrot + ceps2000 * zrot;
+				}
+			}
+
+			for (var i = 0; i < nco; i++)
+			{
+				chcfx[i] = x[i,0];
+				chcfy[i] = x[i,1];
+				chcfz[i] = x[i,2];
+			}
 		}
 
 		#region Service methods

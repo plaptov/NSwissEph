@@ -100,19 +100,6 @@ namespace NSwissEph.Internals
 
 		#region unpacked segment information, only updated when a segment is read:
 
-		/// <see cref="tseg0"/>
-		public JulianDayNumber SegmentStart { get; set; }
-
-		/// <see cref="tseg1"/>
-		public JulianDayNumber SegmentEnd { get; set; }
-
-		/// <summary>
-		/// unpacked cheby coeffs of segment;
-		/// the size is 3 x ncoe
-		/// </summary>
-		/// <see cref="segp"/>
-		public double[] SegmentCoefficients { get; set; }
-
 		/// <summary>
 		/// how many coefficients to evaluate. this may be less than <see cref="CoefficientsNumber"/>
 		/// </summary>

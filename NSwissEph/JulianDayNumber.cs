@@ -31,14 +31,22 @@ namespace NSwissEph
 		/// </summary>
 		public static readonly JulianDayNumber J1952_05_04 = new JulianDayNumber(2434108.5);
 
-		private readonly double _julianDay;
+		/// <summary>
+		/// 1799 January 1
+		/// </summary>
+		public static readonly JulianDayNumber J1799_01_01 = new JulianDayNumber(2378131.5);
+
+		/// <summary>
+		/// 2202 January 1
+		/// </summary>
+		public static readonly JulianDayNumber J2202_01_01 = new JulianDayNumber(2525323.5);
 
 		private JulianDayNumber(double jd)
 		{
-			_julianDay = jd;
+			Raw = jd;
 		}
 
-		internal double Raw => _julianDay;
+		internal double Raw { get; }
 
 		/// <summary>
 		/// This function returns the absolute Julian day number (JD) for a given calendar date.
@@ -122,11 +130,11 @@ namespace NSwissEph
 		/// with bug fix for year< -4711 16-aug-88 Alois Treindl</remarks>
 		public DateTime ToDate(bool isGregorian = true)
 		{
-			double allDays = _julianDay + 32082.5;
+			double allDays = Raw + 32082.5;
 			if (isGregorian)
 			{
 				double leapYears = allDays + Math.Floor(allDays / 36525.0) - Math.Floor(allDays / 146100.0) - 38.0;
-				if (_julianDay >= 1830691.5)
+				if (Raw >= 1830691.5)
 					leapYears += 1;
 				allDays = allDays + Math.Floor(leapYears / 36525.0) - Math.Floor(leapYears / 146100.0) - 38.0;
 			}
@@ -138,43 +146,43 @@ namespace NSwissEph
 				month -= 12;
 			var day = (int)(allDays - Math.Floor(365.25 * years) - Math.Floor(30.6001 * months));
 			var year = (int)(years + Math.Floor((months - 2.0) / 12.0) - 4800);
-			var time = (_julianDay - Math.Floor(_julianDay + 0.5) + 0.5) * 24.0;
+			var time = (Raw - Math.Floor(Raw + 0.5) + 0.5) * 24.0;
 			var t = TimeSpan.FromHours(time);
 
 			return new DateTime(year, month, day, t.Hours, t.Minutes, t.Seconds, DateTimeKind.Utc);
 		}
 
-		public double GetYear() => 2000.0 + (this - J2000)._julianDay / 365.25;
+		public double GetYear() => 2000.0 + (this - J2000).Raw / 365.25;
 
-		public double GetGregorianYear() => 2000.0 + (this - J2000)._julianDay / 365.2425;
+		public double GetGregorianYear() => 2000.0 + (this - J2000).Raw / 365.2425;
 
-		public double GetJulianYear() => 2000 + (_julianDay - 2451557.5) / 365.25;
+		public double GetJulianYear() => 2000 + (Raw - 2451557.5) / 365.25;
 
 		public static JulianDayNumber operator +(JulianDayNumber a, JulianDayNumber b) =>
-			new JulianDayNumber(a._julianDay + b._julianDay);
+			new JulianDayNumber(a.Raw + b.Raw);
 
 		public static JulianDayNumber operator -(JulianDayNumber a, JulianDayNumber b) =>
-			new JulianDayNumber(a._julianDay - b._julianDay);
+			new JulianDayNumber(a.Raw - b.Raw);
 
 		public static bool operator <(JulianDayNumber a, JulianDayNumber b) =>
-			a._julianDay < b._julianDay;
+			a.Raw < b.Raw;
 
 		public static bool operator >(JulianDayNumber a, JulianDayNumber b) =>
-			a._julianDay > b._julianDay;
+			a.Raw > b.Raw;
 
 		public static bool operator <=(JulianDayNumber a, JulianDayNumber b) =>
-			a._julianDay <= b._julianDay;
+			a.Raw <= b.Raw;
 
 		public static bool operator >=(JulianDayNumber a, JulianDayNumber b) =>
-			a._julianDay >= b._julianDay;
+			a.Raw >= b.Raw;
 
-		public static explicit operator double (JulianDayNumber d) => d._julianDay;
+		public static explicit operator double (JulianDayNumber d) => d.Raw;
 
 		internal static JulianDayNumber FromRaw(double value) => new JulianDayNumber(value);
 
 		public override string ToString()
 		{
-			if (_julianDay == 0.0)
+			if (Raw == 0.0)
 				return "(zero)";
 			return ToDate().ToString();
 		}

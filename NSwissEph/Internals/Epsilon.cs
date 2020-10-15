@@ -26,7 +26,7 @@ using static NSwissEph.Consts;
 
 namespace NSwissEph.Internals
 {
-	internal class Epsilon
+	public class Epsilon
 	{
 		private const double OFFSET_EPS_JPLHORIZONS = 35.95;
 		private static readonly JulianDayNumber DCOR_EPS_JPL_TJD0 = JulianDayNumber.FromRaw(2437846.5);
@@ -40,12 +40,12 @@ namespace NSwissEph.Internals
 			35.385, 35.375, 35.415,
 		};
 
-		public Epsilon(JulianDayNumber date, double eps, double sinEps, double cosEps)
+		private Epsilon(JulianDayNumber date, double eps)
 		{
 			Date = date;
 			Eps = eps;
-			SinEps = sinEps;
-			CosEps = cosEps;
+			SinEps = Math.Sin(eps);
+			CosEps = Math.Cos(eps);
 		}
 
 		public JulianDayNumber Date { get; }
@@ -56,7 +56,7 @@ namespace NSwissEph.Internals
 
 		public double CosEps { get; }
 
-		public static double Calc(JulianDayNumber J, SEFLG iflag, SweData swed)
+		public static Epsilon Calc(JulianDayNumber J, SEFLG iflag, SweData swed)
 		{
 			var prec_model = swed.LongtermPrecessionMode;
 			var prec_model_short = swed.ShorttermPrecessionMode;
@@ -82,7 +82,7 @@ namespace NSwissEph.Internals
 				}
 				else
 				{
-					epsiln_owen_1986(J, &eps);
+					eps = OwenPrecession.epsiln_owen_1986(J);
 					eps *= DEGTORAD;
 				}
 			}
@@ -137,13 +137,12 @@ namespace NSwissEph.Internals
 			}
 			else if (prec_model == PrecessionModel.OWEN_1990)
 			{
-				epsiln_owen_1986(J, &eps);
+				eps = OwenPrecession.epsiln_owen_1986(J);
 				eps *= DEGTORAD;
-				//fprintf(stderr, "epso=%.17f\n", eps);
 			}
 			else
 			{ /* SEMOD_PREC_VONDRAK_2011 */
-				swi_ldp_peps(J, NULL, &eps);
+				(_, eps) = Vondrak.swi_ldp_peps(J);
 				if (iflag.HasFlag(SEFLG.JPLHOR_APPROX) && jplhora_model != JplHorizonsMode.Two)
 				{
 					double tofs = (J - DCOR_EPS_JPL_TJD0).Raw / 365.25;
@@ -166,7 +165,8 @@ namespace NSwissEph.Internals
 					eps += dofs * DEGTORAD;
 				}
 			}
-			return eps;
+			return new Epsilon(J, eps);
 		}
+
 	}
 }

@@ -196,8 +196,9 @@ namespace NSwissEph.SwephFiles
 		/// </summary>
 		/// <param name="pdp">Planet</param>
 		/// <param name="jd">Time</param>
+		/// <param name="epsilon">Epsilon for J2000</param>
 		/// <see cref="get_new_segment"/>
-		internal SEFileSegment ReadSegment(PlanetData pdp, JulianDayNumber jd)
+		internal SEFileSegment ReadSegment(PlanetData pdp, JulianDayNumber jd, Epsilon epsilon)
 		{
 			int segmentNumber = (int)((jd - pdp.StartDate).Raw / pdp.SegmentSize);
 			var segmentStart = pdp.StartDate + JulianDayNumber.FromRaw(pdp.SegmentSize * segmentNumber);
@@ -307,7 +308,7 @@ namespace NSwissEph.SwephFiles
 
 			var segment = new SEFileSegment(segmentStart, segmentEnd, segp);
 			if (pdp.Flags.HasFlag(PlanetFlags.Rotate))
-				RotateBack(pdp, segment);
+				RotateBack(pdp, segment, epsilon);
 			return segment;
 		}
 
@@ -316,7 +317,7 @@ namespace NSwissEph.SwephFiles
 		/// Adds reference orbit to chebyshew series (if SEI_FLG_ELLIPSE),
 		/// rotates series to mean equinox of J2000
 		/// </summary>
-		private void RotateBack(PlanetData pdp, SEFileSegment segment)
+		private void RotateBack(PlanetData pdp, SEFileSegment segment, Epsilon epsilon)
 		{
 			int nco = pdp.CoefficientsNumber;
 			var t = segment.Start.Raw + pdp.SegmentSize / 2;
@@ -400,8 +401,8 @@ namespace NSwissEph.SwephFiles
 				if (pdp.InternalBodyNumber == (int)InternalPlanets.Moon)
 				{
 					/* rotate to j2000 equator */
-					x[i,1] = ceps2000 * yrot - seps2000 * zrot;
-					x[i,2] = seps2000 * yrot + ceps2000 * zrot;
+					x[i,1] = epsilon.CosEps * yrot - epsilon.SinEps * zrot;
+					x[i,2] = epsilon.SinEps * yrot + epsilon.CosEps * zrot;
 				}
 			}
 

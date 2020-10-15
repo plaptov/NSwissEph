@@ -1,0 +1,15 @@
+﻿namespace NSwissEph.Internals
+{
+	public static class Calculus
+	{
+		public static double[] CrossProduct(double[] a, double[] b)
+		{
+			return new[]
+			{
+				a[1] * b[2] - a[2] * b[1],
+				a[2] * b[0] - a[0] * b[2],
+				a[0] * b[1] - a[1] * b[0],
+			};
+		}
+	}
+}

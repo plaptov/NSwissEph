@@ -28,7 +28,7 @@ namespace NSwissEph.SwephFiles
 
 		public SEFileData ReadConsts()
 		{
-			var data = new SEFileData()
+			var data = new SEFileData(this)
 			{
 				FileType = FileType,
 				Version = ReadString(),
@@ -196,13 +196,12 @@ namespace NSwissEph.SwephFiles
 		/// </summary>
 		/// <param name="pdp">Planet</param>
 		/// <param name="jd">Time</param>
-		/// <param name="epsilon">Epsilon for J2000</param>
+		/// <param name="epsilonJ2000">Epsilon for J2000</param>
 		/// <see cref="get_new_segment"/>
-		internal SEFileSegment ReadSegment(PlanetData pdp, JulianDayNumber jd, Epsilon epsilon)
+		internal SEFileSegment ReadSegment(PlanetData pdp, JulianDayNumber jd, Epsilon epsilonJ2000)
 		{
 			int segmentNumber = (int)((jd - pdp.StartDate).Raw / pdp.SegmentSize);
 			var segmentStart = pdp.StartDate + JulianDayNumber.FromRaw(pdp.SegmentSize * segmentNumber);
-			var segmentEnd = segmentStart + JulianDayNumber.FromRaw(pdp.SegmentSize);
 
 			var fpos = pdp.FileIndexStart + segmentNumber * 3;
 			fpos = ReadInt32From3Bytes(fpos);
@@ -306,9 +305,10 @@ namespace NSwissEph.SwephFiles
 				}
 			}
 
-			var segment = new SEFileSegment(segmentStart, segmentEnd, segp);
-			if (pdp.Flags.HasFlag(PlanetFlags.Rotate))
-				RotateBack(pdp, segment, epsilon);
+			int evaluateCoefficientsCount = pdp.Flags.HasFlag(PlanetFlags.Rotate)
+				? RotateBack(pdp, segmentStart, segp, epsilonJ2000)
+				: pdp.CoefficientsNumber;
+			var segment = new SEFileSegment(segmentStart, JulianDayNumber.FromRaw(pdp.SegmentSize), segp, evaluateCoefficientsCount);
 			return segment;
 		}
 
@@ -317,13 +317,13 @@ namespace NSwissEph.SwephFiles
 		/// Adds reference orbit to chebyshew series (if SEI_FLG_ELLIPSE),
 		/// rotates series to mean equinox of J2000
 		/// </summary>
-		private void RotateBack(PlanetData pdp, SEFileSegment segment, Epsilon epsilon)
+		private int RotateBack(PlanetData pdp, JulianDayNumber segmentStart, double[] coefficients, Epsilon epsilon)
 		{
 			int nco = pdp.CoefficientsNumber;
-			var t = segment.Start.Raw + pdp.SegmentSize / 2;
+			var t = segmentStart.Raw + pdp.SegmentSize / 2;
 			// data align: chcfx double[nco] + chcfy double[nco] + chcfz double[nco]
 			// allsize: nco * 3
-			var segp = segment.Coefficients;
+			var segp = coefficients;
 			var chcfx = new Span<double>(segp, 0, nco);
 			var chcfy = new Span<double>(segp, nco, nco);
 			var chcfz = new Span<double>(segp, nco * 2, nco);
@@ -387,6 +387,7 @@ namespace NSwissEph.SwephFiles
 			uiy[0] = 2.0 * qav * pav * cosih2;
 			uiy[1] = (1.0 - qav * qav + pav * pav) * cosih2;
 			uiy[2] = 2.0 * qav * cosih2;
+			int evaluateCoefficientsCount = 0;
 			//     rotate to actual orientation in space.
 			for (var i = 0; i < nco; i++)
 			{
@@ -394,7 +395,7 @@ namespace NSwissEph.SwephFiles
 				var yrot = x[i,0] * uix[1] + x[i,1] * uiy[1] + x[i,2] * uiz[1];
 				var zrot = x[i,0] * uix[2] + x[i,1] * uiy[2] + x[i,2] * uiz[2];
 				if (Math.Abs(xrot) + Math.Abs(yrot) + Math.Abs(zrot) >= 1e-14)
-					pdp.EvaluateCoefficientsCount = i;
+					evaluateCoefficientsCount = i;
 				x[i,0] = xrot;
 				x[i,1] = yrot;
 				x[i,2] = zrot;
@@ -412,6 +413,7 @@ namespace NSwissEph.SwephFiles
 				chcfy[i] = x[i,1];
 				chcfz[i] = x[i,2];
 			}
+			return evaluateCoefficientsCount;
 		}
 
 		#region Service methods

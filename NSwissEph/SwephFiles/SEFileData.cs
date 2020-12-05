@@ -1,6 +1,4 @@
-﻿using System;
-using System.Linq;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 
 using NSwissEph.Internals;
 
@@ -8,9 +6,12 @@ namespace NSwissEph.SwephFiles
 {
 	public class SEFileData
 	{
-		public SEFileData()
+		private readonly SEFileReader _reader;
+
+		public SEFileData(SEFileReader reader)
 		{
 			PlanetsData = new Dictionary<InternalPlanets, PlanetData>();
+			_reader = reader;
 		}
 
 		public SEFileType FileType { get; set; }
@@ -31,5 +32,15 @@ namespace NSwissEph.SwephFiles
 		public IReadOnlyCollection<int> PlanetNumbers { get; set; }
 
 		internal Dictionary<InternalPlanets, PlanetData> PlanetsData { get; }
+
+		/// <summary>
+		/// Fetch chebyshew coefficients from sweph file
+		/// </summary>
+		/// <param name="pdp">Planet</param>
+		/// <param name="jd">Time</param>
+		/// <param name="epsilonJ2000">Epsilon for J2000</param>
+		/// <see cref="get_new_segment"/>
+		internal SEFileSegment ReadSegment(PlanetData pdp, JulianDayNumber jd, Epsilon epsilonJ2000) =>
+			_reader.ReadSegment(pdp, jd, epsilonJ2000);
 	}
 }

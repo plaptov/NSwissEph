@@ -16,7 +16,7 @@ namespace NSwissEph
 			ShorttermPrecessionMode = PrecessionModel.Default;
 			JplHorizonsMode = JplHorizonsMode.Default;
 			oec = Epsilon.Calc(date, iflag, this);
-			oec2000 = Epsilon.Calc(date, iflag, this);
+			oec2000 = Epsilon.Calc(JulianDayNumber.J2000, iflag, this);
 		}
 
 		public double TidalAcc { get; private set; }

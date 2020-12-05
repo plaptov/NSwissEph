@@ -1,12 +1,26 @@
-﻿namespace NSwissEph.SwephFiles
+﻿using System;
+
+namespace NSwissEph.SwephFiles
 {
 	internal class SEFileSegment
 	{
-		public SEFileSegment(JulianDayNumber start, JulianDayNumber end, double[] coefficients)
+		/// <summary>
+		/// <c>segp</c>
+		/// unpacked cheby coeffs of segment;
+		/// the size is 3 x ncoe
+		/// </summary>
+		private readonly double[] _coefficients;
+
+		public SEFileSegment(JulianDayNumber start, JulianDayNumber size, double[] coefficients, int evaluateCoefficientsCount)
 		{
 			Start = start;
-			End = end;
-			Coefficients = coefficients;
+			Size = size;
+			_coefficients = coefficients;
+
+			var partSize = coefficients.Length / 3;
+			LongitudeCoefficients = new ArraySegment<double>(_coefficients, 0, evaluateCoefficientsCount);
+			LatitudeCoefficients = new ArraySegment<double>(_coefficients, partSize, evaluateCoefficientsCount);
+			DistanceCoefficients = new ArraySegment<double>(_coefficients, partSize * 2, evaluateCoefficientsCount);
 		}
 
 		/// <summary>
@@ -15,15 +29,19 @@
 		public JulianDayNumber Start { get; }
 
 		/// <summary>
-		/// <c>tseg1</c>
+		/// Segment size (days covered by a polynomial) <code>dseg</code>
 		/// </summary>
-		public JulianDayNumber End { get; }
+		public JulianDayNumber Size { get; }
 
 		/// <summary>
-		/// <c>segp</c>
-		/// unpacked cheby coeffs of segment;
-		/// the size is 3 x ncoe
+		/// <c>tseg1</c>
 		/// </summary>
-		public double[] Coefficients { get; }
+		public JulianDayNumber End => Start + Size;
+		
+		public ArraySegment<double> LongitudeCoefficients { get; }
+
+		public ArraySegment<double> LatitudeCoefficients { get; }
+
+		public ArraySegment<double> DistanceCoefficients { get; }
 	}
 }

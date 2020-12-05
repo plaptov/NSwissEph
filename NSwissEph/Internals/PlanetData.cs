@@ -98,16 +98,6 @@ namespace NSwissEph.Internals
 
 		#endregion
 
-		#region unpacked segment information, only updated when a segment is read:
-
-		/// <summary>
-		/// how many coefficients to evaluate. this may be less than <see cref="CoefficientsNumber"/>
-		/// </summary>
-		/// <see cref="neval"/>
-		public int EvaluateCoefficientsCount { get; set; }
-
-		#endregion
-
 		#region result of most recent data evaluation for this body:
 
 		/// <summary>

@@ -48,7 +48,7 @@ namespace NSwissEph
 		{
 			if (_files.TryGetValue(bodyNumber, out var bag))
 				foreach (var item in bag)
-					if (item.StartDate >= jd && item.EndDate <= jd)
+					if (item.StartDate <= jd && jd <= item.EndDate)
 						return item;
 			throw new FileNotFoundException();
 		}

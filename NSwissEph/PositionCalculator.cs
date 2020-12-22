@@ -22,6 +22,7 @@ namespace NSwissEph
 		public (PlanetPosition position, PlanetPosition speed) CalcBodyPositionAndSpeed(int bodyNumber, DateTime dateTimeInUTC) =>
 			CalcBodyPositionAndSpeedInternal(bodyNumber, dateTimeInUTC, true);
 
+		/// <see cref="sweph"/>
 		private (PlanetPosition position, PlanetPosition speed) CalcBodyPositionAndSpeedInternal(int bodyNumber, DateTime dateTimeInUTC, bool calcSpeed)
 		{
 			var tjd = JulianDayNumber.FromDate(dateTimeInUTC);
@@ -31,7 +32,48 @@ namespace NSwissEph
 				: (InternalPlanets)bodyNumber;
 			var planetData = file.PlanetsData[planet];
 			var segment = file.ReadSegment(planetData, tjd, _sweData.oec2000);
-			return CalcBySegment(tjd, segment, calcSpeed);
+			var (position, speed) = CalcBySegment(tjd, segment, calcSpeed);
+			/* if planet wanted is barycentric sun:
+			* current sepl* files have do not have barycentric sun,
+			* but have heliocentric earth and barycentric earth.
+			* So barycentric sun and must be computed
+			* from heliocentric earth and barycentric earth: the 
+			* computation above gives heliocentric earth, therefore we
+			* have to compute barycentric earth and subtract heliocentric
+			* earth from it. this may be necessary with calls from 
+			* sweplan() and from app_pos_etc_sun() (light-time). */
+			if (bodyNumber == (int)InternalPlanets.BarycentricSun && planetData.Flags.HasFlag(PlanetFlags.EmbHeliocentric))
+			{
+				// sweph() calls sweph() !!! for EMB.
+				// because we always call new calculation, warning about EARTH and EMB equality was omitted
+				var (embPos, embSpeed) = CalcBodyPositionAndSpeedInternal((int)InternalPlanets.EMB, dateTimeInUTC, calcSpeed);
+				position = new PlanetPosition(
+					embPos.Longitude - position.Longitude,
+					embPos.Latitude - position.Latitude,
+					embPos.Distance - position.Distance);
+				if (calcSpeed)
+					speed = new PlanetPosition(
+						embSpeed.Longitude - speed.Longitude,
+						embSpeed.Latitude - speed.Latitude,
+						embSpeed.Distance - speed.Distance);
+			}
+			// asteroids are heliocentric.
+			// if JPL or SWISSEPH, convert to barycentric - currently always
+			if (planet >= InternalPlanets.AnyBody)
+			{
+				// warning: in original code this value cached
+				var (sunPos, sunSpeed) = CalcBodyPositionAndSpeedInternal((int)InternalPlanets.BarycentricSun, dateTimeInUTC, calcSpeed);
+				position = new PlanetPosition(
+					sunPos.Longitude + position.Longitude,
+					sunPos.Latitude + position.Latitude,
+					sunPos.Distance + position.Distance);
+				if (calcSpeed)
+					speed = new PlanetPosition(
+						sunSpeed.Longitude + speed.Longitude,
+						sunSpeed.Latitude + speed.Latitude,
+						sunSpeed.Distance + speed.Distance);
+			}
+			return (position, speed);
 		}
 
 		private (PlanetPosition position, PlanetPosition speed) CalcBySegment(JulianDayNumber tjd, SEFileSegment segment, bool calcSpeed = true)

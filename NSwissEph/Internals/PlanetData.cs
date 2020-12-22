@@ -123,7 +123,7 @@ namespace NSwissEph.Internals
 		/// hel., light-time, aberr., prec. flags etc.
 		/// </summary>
 		/// <see cref="xflgs"/>
-		public int AdditinalFlags { get; set; }
+		public int AdditionalFlags { get; set; }
 
 		/// <summary>
 		/// return positions:

@@ -60,19 +60,26 @@ namespace NSwissEph
 			// asteroids are heliocentric.
 			// if JPL or SWISSEPH, convert to barycentric - currently always
 			if (planet >= InternalPlanets.AnyBody)
-			{
-				// warning: in original code this value cached
-				var (sunPos, sunSpeed) = CalcBodyPositionAndSpeedInternal((int)InternalPlanets.BarycentricSun, dateTimeInUTC, calcSpeed);
-				position = new PlanetPosition(
-					sunPos.Longitude + position.Longitude,
-					sunPos.Latitude + position.Latitude,
-					sunPos.Distance + position.Distance);
-				if (calcSpeed)
-					speed = new PlanetPosition(
-						sunSpeed.Longitude + speed.Longitude,
-						sunSpeed.Latitude + speed.Latitude,
-						sunSpeed.Distance + speed.Distance);
-			}
+				(position, speed) = ConvertToBarycentric(position, speed, dateTimeInUTC, calcSpeed);
+			return (position, speed);
+		}
+
+		private (PlanetPosition position, PlanetPosition speed) ConvertToBarycentric(
+			PlanetPosition position, PlanetPosition speed, DateTime dateTimeInUTC, bool calcSpeed)
+		{
+			// warning: in original code this value cached
+			var (sunPos, sunSpeed) = CalcBodyPositionAndSpeedInternal((int)InternalPlanets.BarycentricSun, dateTimeInUTC, calcSpeed);
+			position = new PlanetPosition(
+				sunPos.Longitude + position.Longitude,
+				sunPos.Latitude + position.Latitude,
+				sunPos.Distance + position.Distance);
+
+			if (calcSpeed)
+				speed = new PlanetPosition(
+					sunSpeed.Longitude + speed.Longitude,
+					sunSpeed.Latitude + speed.Latitude,
+					sunSpeed.Distance + speed.Distance);
+
 			return (position, speed);
 		}
 

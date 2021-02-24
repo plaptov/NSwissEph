@@ -5,20 +5,29 @@ using NSwissEph.SwephFiles;
 
 namespace NSwissEph
 {
-	public class PositionCalculator
+	public class SwePositionCalculator
 	{
 		private readonly SweData _sweData;
 		private readonly SwephFilesStorage _storage;
 
-		public PositionCalculator(SweData sweData, SwephFilesStorage storage)
+		public SwePositionCalculator(SweData sweData, SwephFilesStorage storage)
 		{
 			_sweData = sweData;
 			_storage = storage;
 		}
 
+		public bool IsPlanetHeliocentric(int bodyNumber, DateTime dateTimeInUTC) =>
+			_storage
+			.GetFile(bodyNumber, JulianDayNumber.FromDate(dateTimeInUTC))
+			.PlanetsData[(InternalPlanets)bodyNumber]
+			.Flags
+			.HasFlag(PlanetFlags.Heliocentric);
+
+		/// <see cref="sweph"/>
 		public PlanetPosition CalcBodyPosition(int bodyNumber, DateTime dateTimeInUTC) =>
 			CalcBodyPositionAndSpeedInternal(bodyNumber, dateTimeInUTC, false).position;
 
+		/// <see cref="sweph"/>
 		public (PlanetPosition position, PlanetPosition speed) CalcBodyPositionAndSpeed(int bodyNumber, DateTime dateTimeInUTC) =>
 			CalcBodyPositionAndSpeedInternal(bodyNumber, dateTimeInUTC, true);
 
@@ -64,7 +73,7 @@ namespace NSwissEph
 			return (position, speed);
 		}
 
-		private (PlanetPosition position, PlanetPosition speed) ConvertToBarycentric(
+		public (PlanetPosition position, PlanetPosition speed) ConvertToBarycentric(
 			PlanetPosition position, PlanetPosition speed, DateTime dateTimeInUTC, bool calcSpeed)
 		{
 			// warning: in original code this value cached

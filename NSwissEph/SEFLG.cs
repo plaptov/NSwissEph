@@ -13,6 +13,8 @@ namespace NSwissEph
 	[Flags]
 	public enum SEFLG
 	{
+		None = 0,
+
 		/// <summary>
 		/// use JPL ephemeris
 		/// </summary>
@@ -123,5 +125,9 @@ namespace NSwissEph
 		/// approximate JPL Horizons 1962 - today
 		/// </summary>
 		JPLHOR_APPROX = 512 * 1024,
+
+		DEFAULTEPH = SWIEPH,
+
+		EPHMASK = JPLEPH | SWIEPH | MOSEPH,
 	}
 }

@@ -19,7 +19,6 @@ namespace NSwissEph
 			CalculatePlanetWithSpeed(bodyNumber, dateTimeInUTC).position;
 
 		/// <see cref="sweplan"/>
-
 		public (PlanetPosition position, PlanetPosition speed) CalculatePlanetWithSpeed(int bodyNumber, DateTime dateTimeInUTC)
 		{
 			if (bodyNumber == (int)InternalPlanets.Earth)

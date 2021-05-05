@@ -1,4 +1,5 @@
-﻿using NSwissEph.Internals;
+﻿using System;
+using NSwissEph.Internals;
 
 namespace NSwissEph
 {
@@ -7,15 +8,20 @@ namespace NSwissEph
 	/// </summary>
 	public class SweData
 	{
-		public SweData(SEFLG iflag, JulianDayNumber date)
+		public SweData(SEFLG iflag, DateTime dateTimeInUTC, EarthOrientationParameters eop, bool interpolateNutation = false)
 		{
 			Iflag = iflag;
+			CalculationDate = dateTimeInUTC;
+			Eop = eop;
+			InterpolateNutation = interpolateNutation;
+			CalculationJulianDayNumber = JulianDayNumber.FromDate(dateTimeInUTC);
 			TidalAcc = TidalAcceleration.Get(TidalAccelerationMode.Default);
 			IsManualTidalAcc = false;
 			LongtermPrecessionMode = PrecessionModel.Default;
 			ShorttermPrecessionMode = PrecessionModel.Default;
 			JplHorizonsMode = JplHorizonsMode.Default;
-			oec = Epsilon.Calc(date, iflag, this);
+			NutationModel = NutationModel.Default;
+			oec = Epsilon.Calc(CalculationJulianDayNumber, iflag, this);
 			oec2000 = Epsilon.Calc(JulianDayNumber.J2000, iflag, this);
 		}
 
@@ -29,10 +35,22 @@ namespace NSwissEph
 
 		public JplHorizonsMode JplHorizonsMode { get; private set; }
 
+		public NutationModel NutationModel { get; private set; }
+
 		public SEFLG Iflag { get; }
+
+		public DateTime CalculationDate { get; }
+
+		public EarthOrientationParameters Eop { get; }
+
+		public bool InterpolateNutation { get; }
+
+		public JulianDayNumber CalculationJulianDayNumber { get; }
 
 		public Epsilon oec { get; }
 
 		public Epsilon oec2000 { get; }
+
+		internal InterpolatedNutation? InterpolatedNutation { get; set; }
 	}
 }

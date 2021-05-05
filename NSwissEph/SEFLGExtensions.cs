@@ -30,7 +30,7 @@ namespace NSwissEph
 			if (iflag.HasFlag(SEFLG.SIDEREAL))
 			{
 				iflag |= SEFLG.NONUT;
-				iflag = iflag & ~(SEFLG.JPLHOR | SEFLG.JPLHOR_APPROX);
+				iflag &= ~(SEFLG.JPLHOR | SEFLG.JPLHOR_APPROX);
 			}
 			/* if truepos is set, turn off grav. defl. and aberration */
 			if (iflag.HasFlag(SEFLG.TRUEPOS))
@@ -70,6 +70,17 @@ namespace NSwissEph
 				iflag |= SEFLG.ICRS;
 
 			return iflag;
+		}
+
+		public static EphemerisMode GetEphemerisMode(this SEFLG iflag)
+		{
+			if (iflag.HasFlag(SEFLG.JPLEPH))
+				return EphemerisMode.JPL;
+			if (iflag.HasFlag(SEFLG.SWIEPH))
+				return EphemerisMode.SWISSEPH;
+			if (iflag.HasFlag(SEFLG.MOSEPH))
+				return EphemerisMode.Moshier;
+			return EphemerisMode.Default;
 		}
 	}
 }

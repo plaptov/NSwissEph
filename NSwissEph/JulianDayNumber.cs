@@ -158,6 +158,8 @@ namespace NSwissEph
 
 		public double GetJulianYear() => 2000 + (Raw - 2451557.5) / 365.25;
 
+		internal JulianDayNumber AddDays(double rawValue) => new JulianDayNumber(Raw + rawValue);
+
 		public static JulianDayNumber operator +(JulianDayNumber a, JulianDayNumber b) =>
 			new JulianDayNumber(a.Raw + b.Raw);
 

@@ -118,6 +118,12 @@
     <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </resheader>
   <assembly alias="System.Windows.Forms" name="System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089" />
+  <data name="EOP_14_C04_IAU1980_one_file_1962_now" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>Resources\EOP_14_C04_IAU1980_one_file_1962-now.txt;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </data>
+  <data name="finals_all_iau1980" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>Resources\finals.all.iau1980.txt;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e0891</value>
+  </data>
   <data name="seas_18" type="System.Resources.ResXFileRef, System.Windows.Forms">
     <value>Resources\seas_18.se1;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </data>

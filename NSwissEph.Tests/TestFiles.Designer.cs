@@ -63,6 +63,26 @@ namespace NSwissEph.Tests {
         /// <summary>
         ///   Looks up a localized resource of type System.Byte[].
         /// </summary>
+        internal static byte[] EOP_14_C04_IAU1980_one_file_1962_now {
+            get {
+                object obj = ResourceManager.GetObject("EOP_14_C04_IAU1980_one_file_1962_now", resourceCulture);
+                return ((byte[])(obj));
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized resource of type System.Byte[].
+        /// </summary>
+        internal static byte[] finals_all_iau1980 {
+            get {
+                object obj = ResourceManager.GetObject("finals_all_iau1980", resourceCulture);
+                return ((byte[])(obj));
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized resource of type System.Byte[].
+        /// </summary>
         internal static byte[] seas_18 {
             get {
                 object obj = ResourceManager.GetObject("seas_18", resourceCulture);

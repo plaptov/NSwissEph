@@ -15,7 +15,7 @@ namespace NSwissEph
 				iflag &= ~(SEFLG.HELCTR | SEFLG.BARYCTR);
 			/* if barycentric bit, turn heliocentric bit off */
 			if (iflag.HasFlag(SEFLG.BARYCTR))
-				iflag = iflag & ~SEFLG.HELCTR;
+				iflag &= ~SEFLG.HELCTR;
 			/* if heliocentric bit, turn aberration and deflection off */
 			if (iflag.HasFlag(SEFLG.HELCTR))
 				iflag |= SEFLG.NOABERR | SEFLG.NOGDEFL; /*iflag |= SEFLG.TRUEPOS;*/

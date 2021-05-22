@@ -14,5 +14,15 @@
 		public double Latitude { get; }
 
 		public double Distance { get; }
+
+		public static PlanetPosition operator +(PlanetPosition a, PlanetPosition b)
+		{
+			return new PlanetPosition(a.Longitude + b.Longitude, a.Latitude + b.Latitude, a.Distance + b.Distance);
+		}
+
+		public static PlanetPosition operator -(PlanetPosition a, PlanetPosition b)
+		{
+			return new PlanetPosition(a.Longitude - b.Longitude, a.Latitude - b.Latitude, a.Distance - b.Distance);
+		}
 	}
 }

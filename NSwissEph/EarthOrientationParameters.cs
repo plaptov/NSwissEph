@@ -134,14 +134,7 @@ namespace NSwissEph
 			var end = startIndex;
 			while (char.IsDigit(source[end]) || source[end] == '.' || source[end] == '-')
 				end++;
-			try
-			{
-				return double.Parse(source[startIndex..end], CultureInfo.InvariantCulture);
-			}
-			catch (FormatException)
-			{
-				throw new FormatException($"Unexpected string: {source[startIndex..end]}");
-			}
+			return double.Parse(source[startIndex..end], CultureInfo.InvariantCulture);
 		}
 	}
 }

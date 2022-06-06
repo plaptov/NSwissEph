@@ -44,7 +44,7 @@ namespace NSwissEph
 		public IReadOnlyList<double> dEps { get; }
 
 		/// <summary>
-		/// Load from EOP files
+		/// Load from EOP files (see https://datacenter.iers.org/eop.php)
 		/// <parameter name="eopC04File">File from https://datacenter.iers.org/data/latestVersion/EOP_14_C04_IAU1980_one_file_1962-now.txt</parameter>
 		/// <parameter name="eopFinalsFile">File from https://datacenter.iers.org/data/latestVersion/finals.all.iau1980.txt</parameter>
 		/// </summary>
@@ -129,8 +129,10 @@ namespace NSwissEph
 		{
 			if (source.Length <= startIndex)
 				return 0.0;
-			while (source[startIndex] == ' ')
+			while (startIndex < source.Length && source[startIndex] == ' ')
 				startIndex++;
+			if (startIndex == source.Length)
+				return 0.0;
 			var end = startIndex;
 			while (char.IsDigit(source[end]) || source[end] == '.' || source[end] == '-')
 				end++;

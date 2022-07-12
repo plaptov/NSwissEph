@@ -1,7 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Text;
-
 using NSwissEph.Internals;
 
 using static NSwissEph.Consts;
@@ -63,6 +60,12 @@ namespace NSwissEph
 
 	public class Precession
 	{
+		private const double AS2R = DEGTORAD / 3600.0;
+		private const double EPS0 = 84381.406 * AS2R;
+		private const int NPOL_PECL = 4;
+		private const int NPER_PECL = 8;
+		private const int NPOL_PEQU = 4;
+		private const int NPER_PEQU = 14;
 		private static readonly JulianDayNumber B1850 = JulianDayNumber.FromRaw(2396758.2035810); /* 1850 January 16:53 */
 
 		static double[] precess_1(double[] R, JulianDayNumber J, int direction, PrecessionModel prec_method)
@@ -392,11 +395,9 @@ namespace NSwissEph
 			 * T = Julian centuries from J2000.0.  See AA page B18.
 			 */
 			//T = (J - J2000)/36525.0;
-			double[] pmat = new double[9];
-			if (prec_meth == PrecessionModel.OWEN_1990)
-				owen_pre_matrix(J, pmat, iflag);
-			else
-				pre_pmat(J, pmat);
+			double[] pmat = prec_meth == PrecessionModel.OWEN_1990
+				? OwenPrecession.owen_pre_matrix(J, iflag)
+				: pre_pmat(J);
 			double[] x = new double[3];
 			if (direction == -1)
 			{
@@ -431,7 +432,7 @@ namespace NSwissEph
 		 * first go from J1 to J2000, then call the program again
 		 * to go from J2000 to J2.
 		 */
-		double[] swi_precess(double[] R, JulianDayNumber J, SEFLG iflag, int direction, SweData swed)
+		public static double[] swi_precess(double[] R, JulianDayNumber J, SEFLG iflag, int direction, SweData swed)
 		{
 			double T = (J - J2000) / 36525.0;
 			PrecessionModel prec_model = swed.LongtermPrecessionMode;
@@ -513,6 +514,166 @@ namespace NSwissEph
 				return precess_3(R, J, direction, iflag, PrecessionModel.VONDRAK_2011);
 			}
 		}
+
+		/* precession matrix */
+		private static double[] pre_pmat(JulianDayNumber tjd)
+		{
+			/*equator pole */
+			var peqr = pre_pequ(tjd);
+			/* ecliptic pole */
+			var pecl = pre_pecl(tjd);
+			/* equinox */
+			var v = Calculus.CrossProduct(peqr, pecl);
+			var w = Math.Sqrt(v[0] * v[0] + v[1] * v[1] + v[2] * v[2]);
+			var eqx = new double[3]
+			{
+				v[0] / w,
+				v[1] / w,
+				v[2] / w,
+			};
+			v = Calculus.CrossProduct(peqr, eqx);
+			var rp = new double[9];
+			rp[0] = eqx[0];
+			rp[1] = eqx[1];
+			rp[2] = eqx[2];
+			rp[3] = v[0];
+			rp[4] = v[1];
+			rp[5] = v[2];
+			rp[6] = peqr[0];
+			rp[7] = peqr[1];
+			rp[8] = peqr[2];
+			return rp;
+		}
+
+		/* for pre_pequ(): */
+		/* polynomials */
+		static readonly double[,] xypol = new double[NPOL_PEQU, 2] {
+			{+5453.282155, -73750.930350},
+			{+0.4252841, -0.7675452},
+			{-0.00037173, -0.00018725},
+			{-0.000000152, +0.000000231}
+		};
+
+		/* periodics */
+		static readonly double[,] xyper = new double[5, NPER_PEQU] {
+			{256.75, 708.15, 274.2, 241.45, 2309, 492.2, 396.1, 288.9, 231.1, 1610, 620, 157.87, 220.3, 1200},
+			{-819.940624, -8444.676815, 2600.009459, 2755.17563, -167.659835, 871.855056, 44.769698, -512.313065, -819.415595, -538.071099, -189.793622, -402.922932, 179.516345, -9.814756},
+			{75004.344875, 624.033993, 1251.136893, -1102.212834, -2660.66498, 699.291817, 153.16722, -950.865637, 499.754645, -145.18821, 558.116553, -23.923029, -165.405086, 9.344131},
+			{81491.287984, 787.163481, 1251.296102, -1257.950837, -2966.79973, 639.744522, 131.600209, -445.040117, 584.522874, -89.756563, 524.42963, -13.549067, -210.157124, -44.919798},
+			{1558.515853, 7774.939698, -2219.534038, -2523.969396, 247.850422, -846.485643, -1393.124055, 368.526116, 749.045012, 444.704518, 235.934465, 374.049623, -171.33018, -22.899655}
+		};
+
+		/*
+		 * Long term high precision precession, 
+		 * according to Vondrak/Capitaine/Wallace, "New precession expressions, valid
+		 * for long time intervals", in A&A 534, A22(2011).
+		 */
+		/* precession of the ecliptic */
+		static double[] pre_pecl(JulianDayNumber tjd)
+		{
+			int i;
+			int npol = NPOL_PECL;
+			int nper = NPER_PECL;
+			double t, p, q, w, a, s, c, z;
+			t = (tjd - J2000) / 36525.0;
+			p = 0;
+			q = 0;
+			/* periodic terms */
+			for (i = 0; i < nper; i++)
+			{
+				w = TwoPi * t;
+				a = w / pqper[0,i];
+				s = Math.Sin(a);
+				c = Math.Cos(a);
+				p += c * pqper[1,i] + s * pqper[3,i];
+				q += c * pqper[2,i] + s * pqper[4,i];
+			}
+			/* polynomial terms */
+			w = 1;
+			for (i = 0; i < npol; i++)
+			{
+				p += pqpol[i,0] * w;
+				q += pqpol[i,1] * w;
+				w *= t;
+			}
+			/* both to radians */
+			p *= AS2R;
+			q *= AS2R;
+			/* ecliptic pole vector */
+			z = 1 - p * p - q * q;
+			if (z < 0)
+				z = 0;
+			else
+				z = Math.Sqrt(z);
+			s = Math.Sin(EPS0);
+			c = Math.Cos(EPS0);
+			return new double[3]
+			{
+				p,
+				-q * c - z * s,
+				-q * s + z * c,
+			};
+		}
+
+		/* precession of the equator */
+		static double[] pre_pequ(JulianDayNumber tjd)
+		{
+			int i;
+			int npol = NPOL_PEQU;
+			int nper = NPER_PEQU;
+			double t, x, y, w, a, s, c;
+			t = (tjd - J2000) / 36525.0;
+			x = 0;
+			y = 0;
+			for (i = 0; i < nper; i++)
+			{
+				w = TwoPi * t;
+				a = w / xyper[0,i];
+				s = Math.Sin(a);
+				c = Math.Cos(a);
+				x += c * xyper[1,i] + s * xyper[3,i];
+				y += c * xyper[2,i] + s * xyper[4,i];
+			}
+			/* polynomial terms */
+			w = 1;
+			for (i = 0; i < npol; i++)
+			{
+				x += xypol[i,0] * w;
+				y += xypol[i,1] * w;
+				w *= t;
+			}
+			x *= AS2R;
+			y *= AS2R;
+			/* equator pole vector */
+			w = x * x + y * y;
+			return new double[3]
+			{
+				x,
+				y,
+				w < 1 ? Math.Sqrt(1 - w) : 0,
+			};
+		}
+
+		/* for pre_pecl(): */
+		/* polynomials */
+		static readonly double[,] pqpol = new double[NPOL_PECL, 2] {
+			{+5851.607687, -1600.886300},
+			{-0.1189000, +1.1689818},
+			{-0.00028913, -0.00000020},
+			{+0.000000101, -0.000000437}
+		};
+
+		/* periodics */
+		static readonly double[,] pqper = new double[5, NPER_PECL] {
+			{708.15, 2309, 1620, 492.2, 1183, 622, 882, 547},
+			{-5486.751211, -17.127623, -617.517403, 413.44294, 78.614193, -180.732815, -87.676083, 46.140315},
+			// original publication    A&A 534, A22 (2011):
+		  //{-684.66156, 2446.28388, 399.671049, -356.652376, -186.387003, -316.80007, 198.296071, 101.135679}, 
+			// typo fixed according to A&A 541, C1 (2012)
+			{-684.66156, 2446.28388, 399.671049, -356.652376, -186.387003, -316.80007, 198.296701, 101.135679}, 
+			{667.66673, -2354.886252, -428.152441, 376.202861, 184.778874, 335.321713, -185.138669, -120.97283},
+			{-5523.863691, -549.74745, -310.998056, 421.535876, -36.776172, -145.278396, -34.74445, 22.885731}
+		};
 
 	}
 }

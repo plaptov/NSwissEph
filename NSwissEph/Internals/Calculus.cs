@@ -65,6 +65,9 @@ namespace NSwissEph.Internals
 				return x;
 		}
 
+		/// <summary>
+		/// swi_cross_prod
+		/// </summary>
 		public static double[] CrossProduct(double[] a, double[] b)
 		{
 			return new[]

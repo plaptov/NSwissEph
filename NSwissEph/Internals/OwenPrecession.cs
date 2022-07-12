@@ -17,6 +17,10 @@
  * i.e. 10000 +- 40 centuries 
  */
 
+using System;
+
+using static NSwissEph.Consts;
+
 namespace NSwissEph.Internals
 {
 	internal static class OwenPrecession
@@ -113,5 +117,74 @@ namespace NSwissEph.Internals
 			}
 			return (t0, j);
 		}
+
+		/// <summary>
+		/// precession matrix Owen 1990
+		/// </summary>
+		public static double[] owen_pre_matrix(JulianDayNumber tjd, SEFLG iflag)
+		{
+			int i;
+			double chia = 0, psia = 0, oma = 0;
+			double coseps0, sineps0, coschia, sinchia, cospsia, sinpsia, cosoma, sinoma;
+			double[] k = new double[10], tau = new double[10];
+			var (t0, icof) = get_owen_t0_icof(tjd);
+			tau[0] = 0;
+			tau[1] = (tjd - t0) / 36525.0 / 40.0;
+			for (i = 2; i <= 9; i++)
+			{
+				tau[i] = tau[1] * tau[i - 1];
+			}
+			k[0] = 1;
+			k[1] = tau[1];
+			k[2] = 2 * tau[2] - 1;
+			k[3] = 4 * tau[3] - 3 * tau[1];
+			k[4] = 8 * tau[4] - 8 * tau[2] + 1;
+			k[5] = 16 * tau[5] - 20 * tau[3] + 5 * tau[1];
+			k[6] = 32 * tau[6] - 48 * tau[4] + 18 * tau[2] - 1;
+			k[7] = 64 * tau[7] - 112 * tau[5] + 56 * tau[3] - 7 * tau[1];
+			k[8] = 128 * tau[8] - 256 * tau[6] + 160 * tau[4] - 32 * tau[2] + 1;
+			k[9] = 256 * tau[9] - 576 * tau[7] + 432 * tau[5] - 120 * tau[3] + 9 * tau[1];
+			for (i = 0; i < 10; i++)
+			{
+				//eps += (k[i] * owen_eps0_coef[icof][i]);
+				psia += (k[i] * owen_psia_coef[icof][i]);
+				oma += (k[i] * owen_oma_coef[icof][i]);
+				chia += (k[i] * owen_chia_coef[icof][i]);
+			}
+			if (iflag.HasFlag(SEFLG.JPLHOR) || iflag.HasFlag(SEFLG.JPLHOR_APPROX))
+			{
+				/* 
+				 * In comparison with JPL Horizons we have an almost constant offset
+				 * almost constant offset in ecl. longitude of about -0.000019 deg. 
+				 * We fix this as follows: */
+				psia += -0.000018560;
+			}
+			var eps0 = 84381.448 / 3600.0;
+			eps0 *= DEGTORAD;
+			psia *= DEGTORAD;
+			chia *= DEGTORAD;
+			oma *= DEGTORAD;
+			coseps0 = Math.Cos(eps0);
+			sineps0 = Math.Sin(eps0);
+			coschia = Math.Cos(chia);
+			sinchia = Math.Sin(chia);
+			cospsia = Math.Cos(psia);
+			sinpsia = Math.Sin(psia);
+			cosoma = Math.Cos(oma);
+			sinoma = Math.Sin(oma);
+
+			var rp = new double[9];
+			rp[0] = coschia * cospsia + sinchia * cosoma * sinpsia;
+			rp[1] = (-coschia * sinpsia + sinchia * cosoma * cospsia) * coseps0 + sinchia * sinoma * sineps0;
+			rp[2] = (-coschia * sinpsia + sinchia * cosoma * cospsia) * sineps0 - sinchia * sinoma * coseps0;
+			rp[3] = -sinchia * cospsia + coschia * cosoma * sinpsia;
+			rp[4] = (sinchia * sinpsia + coschia * cosoma * cospsia) * coseps0 + coschia * sinoma * sineps0;
+			rp[5] = (sinchia * sinpsia + coschia * cosoma * cospsia) * sineps0 - coschia * sinoma * coseps0;
+			rp[6] = sinoma * sinpsia;
+			rp[7] = sinoma * cospsia * coseps0 - cosoma * sineps0;
+			rp[8] = sinoma * cospsia * sineps0 + cosoma * coseps0;
+			return rp;
+		}
+
 	}
 }

@@ -56,6 +56,9 @@ namespace NSwissEph.Internals
 
 		public double CosEps { get; }
 
+		/// <summary>
+		/// <see cref="swi_epsiln"/>
+		/// </summary>
 		public static Epsilon Calc(JulianDayNumber J, SEFLG iflag, SweData swed)
 		{
 			var prec_model = swed.LongtermPrecessionMode;

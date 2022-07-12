@@ -178,7 +178,16 @@ namespace NSwissEph
 		public static bool operator >=(JulianDayNumber a, JulianDayNumber b) =>
 			a.Raw >= b.Raw;
 
+		public static bool operator ==(JulianDayNumber a, JulianDayNumber b) =>
+			a.Raw == b.Raw;
+
+		public static bool operator !=(JulianDayNumber a, JulianDayNumber b) =>
+			a.Raw != b.Raw;
+
 		public static explicit operator double (JulianDayNumber d) => d.Raw;
+
+		public static double operator /(JulianDayNumber jd, double x) =>
+			jd.Raw / x;
 
 		internal static JulianDayNumber FromRaw(double value) => new JulianDayNumber(value);
 
@@ -188,5 +197,10 @@ namespace NSwissEph
 				return "(zero)";
 			return ToDate().ToString();
 		}
+
+		public override int GetHashCode() => Raw.GetHashCode();
+
+		public override bool Equals(object obj) =>
+			obj is JulianDayNumber jd && this == jd;
 	}
 }

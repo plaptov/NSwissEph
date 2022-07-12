@@ -1,5 +1,8 @@
 ﻿namespace NSwissEph
 {
+	/// <summary>
+	/// SEMOD_PREC
+	/// </summary>
 	public enum PrecessionModel
 	{
 		/// <summary>
@@ -52,6 +55,13 @@
 		/// </summary>
 		OWEN_1990 = 10,
 
+		/// <summary>
+		/// Newcomb 1895
+		/// </summary>
+		NEWCOMB = 11,
+
 		Default = VONDRAK_2011,
+
+		DefaultShort = VONDRAK_2011,
 	}
 }

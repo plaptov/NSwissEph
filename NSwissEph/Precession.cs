@@ -68,7 +68,7 @@ namespace NSwissEph
 		private const int NPER_PEQU = 14;
 		private static readonly JulianDayNumber B1850 = JulianDayNumber.FromRaw(2396758.2035810); /* 1850 January 16:53 */
 
-		static double[] precess_1(double[] R, JulianDayNumber J, int direction, PrecessionModel prec_method)
+		static CartesianCoordinates precess_1(CartesianCoordinates R, JulianDayNumber J, int direction, PrecessionModel prec_method)
 		{
 			double Z = 0, z = 0, TH = 0;
 			double sinth, costh, sinZ, cosZ, sinz, cosz, A, B;
@@ -198,32 +198,32 @@ namespace NSwissEph
 			cosz = Math.Cos(z);
 			A = cosZ * costh;
 			B = sinZ * costh;
-			double[] x = new double[3];
+			double lon, lat, alt;
 			if (direction < 0)
 			{ /* From J2000.0 to J */
-				x[0] = (A * cosz - sinZ * sinz) * R[0]
-					- (B * cosz + cosZ * sinz) * R[1]
-						  - sinth * cosz * R[2];
-				x[1] = (A * sinz + sinZ * cosz) * R[0]
-					- (B * sinz - cosZ * cosz) * R[1]
-						  - sinth * sinz * R[2];
-				x[2] = cosZ * sinth * R[0]
-						  - sinZ * sinth * R[1]
-						  + costh * R[2];
+				lon = (A * cosz - sinZ * sinz) * R.Longitude
+					- (B * cosz + cosZ * sinz) * R.Latitude
+						  - sinth * cosz * R.Altitude;
+				lat = (A * sinz + sinZ * cosz) * R.Longitude
+					- (B * sinz - cosZ * cosz) * R.Latitude
+						  - sinth * sinz * R.Altitude;
+				alt = cosZ * sinth * R.Longitude
+						  - sinZ * sinth * R.Latitude
+						  + costh * R.Altitude;
 			}
 			else
 			{ /* From J to J2000.0 */
-				x[0] = (A * cosz - sinZ * sinz) * R[0]
-					+ (A * sinz + sinZ * cosz) * R[1]
-						  + cosZ * sinth * R[2];
-				x[1] = -(B * cosz + cosZ * sinz) * R[0]
-					- (B * sinz - cosZ * cosz) * R[1]
-						  - sinZ * sinth * R[2];
-				x[2] = -sinth * cosz * R[0]
-						  - sinth * sinz * R[1]
-								  + costh * R[2];
+				lon = (A * cosz - sinZ * sinz) * R.Longitude
+					+ (A * sinz + sinZ * cosz) * R.Latitude
+						  + cosZ * sinth * R.Altitude;
+				lat = -(B * cosz + cosZ * sinz) * R.Longitude
+					- (B * sinz - cosZ * cosz) * R.Latitude
+						  - sinZ * sinth * R.Altitude;
+				alt = -sinth * cosz * R.Longitude
+						  - sinth * sinz * R.Latitude
+								  + costh * R.Altitude;
 			}
-			return x;
+			return new CartesianCoordinates(lon, lat, alt);
 		}
 
 		/* In WILLIAMS and SIMON, Laskar's terms of order higher than t^4
@@ -275,12 +275,11 @@ namespace NSwissEph
 			-5.4000441e-11, 1.32115526e-9, -5.998737027e-7, -1.6242797091e-5,
 			0.002278495537, 0.0 };
 
-		static double[] precess_2(double[] R, JulianDayNumber J, SEFLG iflag, int direction, PrecessionModel prec_method, SweData swed)
+		static CartesianCoordinates precess_2(CartesianCoordinates R, JulianDayNumber J, SEFLG iflag, int direction, PrecessionModel prec_method, SweData swed)
 		{
 			int i;
 			double T, z;
 			double eps, sineps, coseps;
-			double[] x = new double[3];
 			double A, B, pA, W;
 			double[] pAcof, inclcof, nodecof;
 			if (J == J2000)
@@ -320,10 +319,10 @@ namespace NSwissEph
 				eps = Epsilon.Calc(J2000, iflag, swed).Eps; /* From J2000 */
 			sineps = Math.Sin(eps);
 			coseps = Math.Cos(eps);
-			x[0] = R[0];
-			z = coseps * R[1] + sineps * R[2];
-			x[2] = -sineps * R[1] + coseps * R[2];
-			x[1] = z;
+			double lon = R.Longitude;
+			z = coseps * R.Latitude + sineps * R.Altitude;
+			double alt = -sineps * R.Latitude + coseps * R.Altitude;
+			double lat = z;
 			/* Precession in longitude */
 			T /= 10.0; /* thousands of years */
 			pA = pAcof[0];
@@ -345,9 +344,9 @@ namespace NSwissEph
 				z = W;
 			B = Math.Cos(z);
 			A = Math.Sin(z);
-			z = B * x[0] + A * x[1];
-			x[1] = -A * x[0] + B * x[1];
-			x[0] = z;
+			z = B * lon + A * lat;
+			lat = -A * lon + B * lat;
+			lon = z;
 			/* Rotate about new x axis by the inclination of the moving
 			 * ecliptic on the J2000 ecliptic.
 			 */
@@ -358,9 +357,9 @@ namespace NSwissEph
 				z = -z;
 			B = Math.Cos(z);
 			A = Math.Sin(z);
-			z = B * x[1] + A * x[2];
-			x[2] = -A * x[1] + B * x[2];
-			x[1] = z;
+			z = B * lat + A * alt;
+			alt = -A * lat + B * alt;
+			lat = z;
 			/* Rotate about new z axis back from the node.
 			 */
 			if (direction == 1)
@@ -369,9 +368,9 @@ namespace NSwissEph
 				z = -W - pA;
 			B = Math.Cos(z);
 			A = Math.Sin(z);
-			z = B * x[0] + A * x[1];
-			x[1] = -A * x[0] + B * x[1];
-			x[0] = z;
+			z = B * lon + A * lat;
+			lat = -A * lon + B * lat;
+			lon = z;
 			/* Rotate about x axis to final equator.
 			 */
 			if (direction == 1)
@@ -380,13 +379,13 @@ namespace NSwissEph
 				eps = Epsilon.Calc(J, iflag, swed).Eps;
 			sineps = Math.Sin(eps);
 			coseps = Math.Cos(eps);
-			z = coseps * x[1] - sineps * x[2];
-			x[2] = sineps * x[1] + coseps * x[2];
-			x[1] = z;
-			return x;
+			z = coseps * lat - sineps * alt;
+			alt = sineps * lat + coseps * alt;
+			lat = z;
+			return new CartesianCoordinates(lon, lat, alt);
 		}
 
-		static double[] precess_3(double[] R, JulianDayNumber J, int direction, SEFLG iflag, PrecessionModel prec_meth)
+		static CartesianCoordinates precess_3(CartesianCoordinates R, JulianDayNumber J, int direction, SEFLG iflag, PrecessionModel prec_meth)
 		{
 			int i, j;
 			if (J == J2000)
@@ -398,26 +397,26 @@ namespace NSwissEph
 			double[] pmat = prec_meth == PrecessionModel.OWEN_1990
 				? OwenPrecession.owen_pre_matrix(J, iflag)
 				: pre_pmat(J);
-			double[] x = new double[3];
+			Span<double> x = stackalloc double[3];
 			if (direction == -1)
 			{
 				for (i = 0, j = 0; i <= 2; i++, j = i * 3)
 				{
-					x[i] = R[0] * pmat[j + 0] +
-						R[1] * pmat[j + 1] +
-						R[2] * pmat[j + 2];
+					x[i] = R.Longitude * pmat[j + 0] +
+						R.Latitude * pmat[j + 1] +
+						R.Altitude * pmat[j + 2];
 				}
 			}
 			else
 			{
-				for (i = 0, j = 0; i <= 2; i++, j = i * 3)
+				for (i = 0; i <= 2; i++)
 				{
-					x[i] = R[0] * pmat[i + 0] +
-						R[1] * pmat[i + 3] +
-						R[2] * pmat[i + 6];
+					x[i] = R.Longitude * pmat[i + 0] +
+						R.Latitude * pmat[i + 3] +
+						R.Altitude * pmat[i + 6];
 				}
 			}
-			return x;
+			return new CartesianCoordinates(x[0], x[1], x[2]);
 		}
 
 		/* Subroutine arguments:
@@ -432,7 +431,7 @@ namespace NSwissEph
 		 * first go from J1 to J2000, then call the program again
 		 * to go from J2000 to J2.
 		 */
-		public static double[] swi_precess(double[] R, JulianDayNumber J, SEFLG iflag, int direction, SweData swed)
+		public static CartesianCoordinates swi_precess(CartesianCoordinates R, JulianDayNumber J, SEFLG iflag, int direction, SweData swed)
 		{
 			double T = (J - J2000) / 36525.0;
 			PrecessionModel prec_model = swed.LongtermPrecessionMode;

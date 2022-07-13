@@ -140,7 +140,7 @@ namespace NSwissEph
 			var lat = Epsilon.Calc(JulianDayNumber.J2000.AddDays(DeltaTCalculator.Calc(JulianDayNumber.J2000)), SEFLG.None, swed).Eps * RADTODEG;
 			var xs_cart = xs_pol.ToCartesian().Transform(-lat * DEGTORAD);
 			/* precess to mean equinox of date */
-			swi_precess(xs, tjd_et, 0, -1);
+			xs_cart = Precession.swi_precess(xs_cart, tjd_et, SEFLG.None, -1, swed);
 			/* to mean equinox of date */
 			lat = Epsilon.Calc(tjd_et, SEFLG.None, swed).Eps * RADTODEG;
 			var nutlo = NutationCalculator.Calculate(tjd_et, swed);

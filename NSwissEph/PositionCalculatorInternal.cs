@@ -124,7 +124,57 @@ namespace NSwissEph
 			* not SEFLG_NONUT is set */
 			var sidt = SiderealTime.Calc(tjd_ut, eps * RADTODEG, nut * RADTODEG, swed);
 			sidt *= 15; /* in degrees */
-			TODO
+			/* length of position and speed vectors;
+			 * the height above sea level must be taken into account.
+			 * with the moon, an altitude of 3000 m makes a difference 
+			 * of about 2 arc seconds.
+			 * height is referred to the average sea level. however, 
+			 * the spheroid (geoid), which is defined by the average 
+			 * sea level (or rather by all points of same gravitational
+			 * potential), is of irregular shape and cannot easily
+			 * be taken into account. therefore, we refer height to 
+			 * the surface of the ellipsoid. the resulting error 
+			 * is below 500 m, i.e. 0.2 - 0.3 arc seconds with the moon.
+			 */
+			cosfi = cos(swed.topd.geolat * DEGTORAD);
+			sinfi = sin(swed.topd.geolat * DEGTORAD);
+			cc = 1 / sqrt(cosfi * cosfi + (1 - f) * (1 - f) * sinfi * sinfi);
+			ss = (1 - f) * (1 - f) * cc;
+			/* neglect polar motion (displacement of a few meters), as long as 
+			 * we use the earth ellipsoid */
+			/* ... */
+			/* add sidereal time */
+			cosl = cos((swed.topd.geolon + sidt) * DEGTORAD);
+			sinl = sin((swed.topd.geolon + sidt) * DEGTORAD);
+			h = swed.topd.geoalt;
+			xobs[0] = (re * cc + h) * cosfi * cosl;
+			xobs[1] = (re * cc + h) * cosfi * sinl;
+			xobs[2] = (re * ss + h) * sinfi;
+			/* polar coordinates */
+			swi_cartpol(xobs, xobs);
+			/* speed */
+			xobs[3] = EARTH_ROT_SPEED;
+			xobs[4] = xobs[5] = 0;
+			swi_polcart_sp(xobs, xobs);
+			/* to AUNIT */
+			for (i = 0; i <= 5; i++)
+				xobs[i] /= AUNIT;
+			/* subtract nutation, set backward flag */
+			if (!(iflag & SEFLG_NONUT))
+			{
+				swi_coortrf2(xobs, xobs, -swed.nut.snut, swed.nut.cnut);
+				/* speed of xobs is always required, namely for aberration!!! */
+				/*if (iflag & SEFLG_SPEED)*/
+				swi_coortrf2(xobs + 3, xobs + 3, -swed.nut.snut, swed.nut.cnut);
+				swi_nutate(xobs, iflag | SEFLG_SPEED, TRUE);
+			}
+			/* precess to J2000 */
+			swi_precess(xobs, tjd, iflag, J_TO_J2000);
+			/*if (iflag & SEFLG_SPEED)*/
+			swi_precess_speed(xobs, tjd, iflag, J_TO_J2000);
+			/* neglect frame bias (displacement of 45cm) */
+			/* ... */
+
 		}
 	}
 }
